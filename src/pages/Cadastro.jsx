@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
+import { UserPlus, Mail, Lock, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
@@ -15,6 +15,8 @@ export default function Cadastro() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
@@ -24,7 +26,11 @@ export default function Cadastro() {
     e.preventDefault();
     setError("");
     if (password !== confirmPassword) {
-      setError("As senhas não coincidem");
+      setError("As senhas não coincidem. Digite a mesma senha em ambos os campos.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres.");
       return;
     }
     setLoading(true);
@@ -32,7 +38,7 @@ export default function Cadastro() {
       await base44.auth.register({ email, password });
       setShowOtp(true);
     } catch (err) {
-      setError(err.message || "Falha ao criar conta");
+      setError(err?.message || "Falha ao criar conta. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -48,7 +54,7 @@ export default function Cadastro() {
       }
       window.location.href = safeReturnTo();
     } catch (err) {
-      setError(err.message || "Código de verificação inválido");
+      setError(err?.message || "Código de verificação inválido");
     } finally {
       setLoading(false);
     }
@@ -60,10 +66,10 @@ export default function Cadastro() {
       await base44.auth.resendOtp(email);
       toast({
         title: "Código enviado",
-        description: "Verifique seu e-mail para o novo código.",
+        description: "Verifique seu e-mail para o novo código de verificação.",
       });
     } catch (err) {
-      setError(err.message || "Falha ao reenviar código");
+      setError(err?.message || "Falha ao reenviar código");
     }
   };
 
@@ -76,12 +82,13 @@ export default function Cadastro() {
       <AuthLayout
         icon={Mail}
         title="Verifique seu e-mail"
-        subtitle={`Enviamos um código para ${email}`}
+        subtitle={`Enviamos um código de segurança de 6 dígitos para ${email}`}
         footer={null}
       >
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-            {error}
+          <div className="mb-5 p-3.5 rounded-xl bg-danger/15 border border-danger/30 text-snow flex items-start gap-2.5 text-sm animate-fade-in">
+            <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+            <span>{error}</span>
           </div>
         )}
         <div className="flex justify-center mb-6">
@@ -92,34 +99,38 @@ export default function Cadastro() {
             autoFocus
             autoComplete="one-time-code"
           >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
+            <InputOTPGroup className="gap-2">
+              <InputOTPSlot index={0} className="w-11 h-12 text-lg font-bold bg-onyx/80 border-snow/15 text-snow rounded-lg" />
+              <InputOTPSlot index={1} className="w-11 h-12 text-lg font-bold bg-onyx/80 border-snow/15 text-snow rounded-lg" />
+              <InputOTPSlot index={2} className="w-11 h-12 text-lg font-bold bg-onyx/80 border-snow/15 text-snow rounded-lg" />
+              <InputOTPSlot index={3} className="w-11 h-12 text-lg font-bold bg-onyx/80 border-snow/15 text-snow rounded-lg" />
+              <InputOTPSlot index={4} className="w-11 h-12 text-lg font-bold bg-onyx/80 border-snow/15 text-snow rounded-lg" />
+              <InputOTPSlot index={5} className="w-11 h-12 text-lg font-bold bg-onyx/80 border-snow/15 text-snow rounded-lg" />
             </InputOTPGroup>
           </InputOTP>
         </div>
         <Button
-          className="w-full h-12 font-medium"
+          className="w-full h-12 font-semibold text-snow bg-verdigris hover:bg-verdigris-hover rounded-xl shadow-lg shadow-verdigris/25 hover:shadow-verdigris/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
           onClick={handleVerify}
           disabled={loading || otpCode.length < 6}
         >
           {loading ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Verificando...
+              <Loader2 className="w-4 h-4 mr-2 animate-spin text-snow" />
+              Validando código...
             </>
           ) : (
-            "Verificar"
+            "Verificar e Acessar"
           )}
         </Button>
-        <p className="text-center text-sm text-muted-foreground mt-4">
+        <p className="text-center text-sm text-snow/60 mt-4">
           Não recebeu o código?{" "}
-          <button onClick={handleResend} className="text-primary font-medium hover:underline">
-            Reenviar
+          <button
+            type="button"
+            onClick={handleResend}
+            className="text-pearl font-medium hover:underline ml-1"
+          >
+            Reenviar código
           </button>
         </p>
       </AuthLayout>
@@ -130,48 +141,50 @@ export default function Cadastro() {
     <AuthLayout
       icon={UserPlus}
       title="Crie sua conta"
-      subtitle="Cadastre-se para começar no Nexora"
+      subtitle="Cadastre-se para começar a gerenciar sua empresa no Nexora"
       footer={
-        <>
-          Já tem uma conta?{" "}
+        <p className="text-snow/70 text-sm">
+          Já possui uma conta?{" "}
           <Link
             to={"/login" + (safeReturnTo() !== "/" ? "?returnTo=" + encodeURIComponent(safeReturnTo()) : "")}
-            className="text-primary font-medium hover:underline"
+            className="text-pearl font-semibold hover:underline ml-1"
           >
             Fazer login
           </Link>
-        </>
+        </p>
       }
     >
       <Button
+        type="button"
         variant="outline"
-        className="w-full h-12 text-sm font-medium mb-6"
+        className="w-full h-12 text-sm font-medium mb-6 bg-onyx/70 hover:bg-onyx border border-snow/15 hover:border-pearl/40 text-snow rounded-xl transition-all duration-200 shadow-sm flex items-center justify-center gap-3 group"
         onClick={handleGoogle}
       >
-        <GoogleIcon className="w-5 h-5 mr-2" />
-        Continuar com Google
+        <GoogleIcon className="w-5 h-5 shrink-0 transition-transform group-hover:scale-105" />
+        <span className="font-medium text-snow">Continuar com o Google</span>
       </Button>
 
       <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
+          <div className="w-full border-t border-snow/10" />
         </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-3 text-muted-foreground">ou</span>
+        <div className="relative flex justify-center text-xs uppercase tracking-wider font-semibold">
+          <span className="bg-graphite px-3 text-snow/40">ou cadastre-se com e-mail</span>
         </div>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-          {error}
+        <div className="mb-5 p-3.5 rounded-xl bg-danger/15 border border-danger/30 text-snow flex items-start gap-2.5 text-sm animate-fade-in">
+          <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+          <span>{error}</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">E-mail</Label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+        <div className="space-y-1.5">
+          <Label htmlFor="email" className="text-sm font-medium text-snow/90">E-mail</Label>
+          <div className="relative group">
+            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-snow/40 pointer-events-none transition-colors group-focus-within:text-pearl" aria-hidden="true" />
             <Input
               id="email"
               type="email"
@@ -180,51 +193,76 @@ export default function Cadastro() {
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-10 h-12 bg-onyx/70 border-snow/15 focus:border-pearl focus:ring-2 focus:ring-pearl/20 text-snow placeholder:text-snow/30 rounded-xl transition-all"
               required
             />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Senha</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+
+        <div className="space-y-1.5">
+          <Label htmlFor="password" className="text-sm font-medium text-snow/90">Senha</Label>
+          <div className="relative group">
+            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-snow/40 pointer-events-none transition-colors group-focus-within:text-pearl" aria-hidden="true" />
             <Input
               id="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="new-password"
-              placeholder="••••••••"
+              placeholder="No mínimo 6 caracteres"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-10 pr-11 h-12 bg-onyx/70 border-snow/15 focus:border-pearl focus:ring-2 focus:ring-pearl/20 text-snow placeholder:text-snow/30 rounded-xl transition-all"
               required
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-snow/40 hover:text-snow transition-colors p-1 rounded-md focus:outline-none focus:ring-1 focus:ring-pearl"
+              aria-label={showPassword ? "Ocultar senha" : "Exibir senha"}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4 text-pearl" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="confirm">Confirmar Senha</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+
+        <div className="space-y-1.5">
+          <Label htmlFor="confirm" className="text-sm font-medium text-snow/90">Confirmar Senha</Label>
+          <div className="relative group">
+            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-snow/40 pointer-events-none transition-colors group-focus-within:text-pearl" aria-hidden="true" />
             <Input
               id="confirm"
-              type="password"
+              type={showConfirmPassword ? "text" : "password"}
               autoComplete="new-password"
-              placeholder="••••••••"
+              placeholder="Repita sua senha"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-10 pr-11 h-12 bg-onyx/70 border-snow/15 focus:border-pearl focus:ring-2 focus:ring-pearl/20 text-snow placeholder:text-snow/30 rounded-xl transition-all"
               required
             />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-snow/40 hover:text-snow transition-colors p-1 rounded-md focus:outline-none focus:ring-1 focus:ring-pearl"
+              aria-label={showConfirmPassword ? "Ocultar senha" : "Exibir senha"}
+              tabIndex={-1}
+            >
+              {showConfirmPassword ? <EyeOff className="w-4 h-4 text-pearl" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
+
+        <Button
+          type="submit"
+          className="w-full h-12 font-semibold text-snow bg-verdigris hover:bg-verdigris-hover rounded-xl shadow-lg shadow-verdigris/25 hover:shadow-verdigris/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 mt-2"
+          disabled={loading}
+        >
           {loading ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Criando conta...
+              <Loader2 className="w-4 h-4 mr-2 animate-spin text-snow" />
+              Criando sua conta...
             </>
           ) : (
-            "Criar conta"
+            "Criar Minha Conta"
           )}
         </Button>
       </form>
