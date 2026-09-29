@@ -52,9 +52,15 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
               end={item.end}
               onClick={onCloseMobile}
               className={({ isActive }) =>
-                `relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+                `relative flex items-center py-2.5 rounded-lg transition-all duration-200 group ${
+                  collapsed
+                    ? 'justify-center px-0'
+                    : isActive
+                      ? 'pl-4 pr-3 gap-3'
+                      : 'px-3 gap-3'
+                } ${
                   isActive
-                    ? 'text-pearl bg-verdigris-light'
+                    ? 'text-pearl bg-verdigris-light font-medium'
                     : 'text-snow/70 hover:text-snow hover:bg-graphite-hover'
                 }`
               }
@@ -64,7 +70,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
                   {isActive && (
                     <motion.span
                       layoutId="active-bar"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-[3px] rounded-r-full bg-verdigris"
+                      className={`absolute ${collapsed ? 'left-1' : 'left-1.5'} top-1/2 -translate-y-1/2 h-5 w-1 rounded-full bg-verdigris shadow-[0_0_8px_rgba(51,153,137,0.6)]`}
                     />
                   )}
                   <Icon size={20} className="shrink-0 transition-transform group-hover:scale-105" />
