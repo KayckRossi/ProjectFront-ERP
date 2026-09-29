@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Bell, Menu, Sun, Moon, ChevronDown, User, LogOut } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -39,15 +40,26 @@ export default function Header({ onMenuClick }) {
         {/* Dark / Light mode toggle */}
         <button
           onClick={toggleTheme}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-snow/70 hover:text-pearl hover:bg-graphite-hover transition-colors cursor-pointer"
+          className="relative w-9 h-9 flex items-center justify-center rounded-lg text-snow/70 hover:text-pearl hover:bg-graphite-hover transition-colors cursor-pointer overflow-hidden"
           aria-label={isDark ? "Mudar para modo dia (claro)" : "Mudar para modo noite (escuro)"}
           title={isDark ? "Mudar para modo dia (claro)" : "Mudar para modo noite (escuro)"}
         >
-          {isDark ? (
-            <Sun size={18} className="text-warning transition-transform hover:rotate-45 duration-200" />
-          ) : (
-            <Moon size={18} className="text-pearl transition-transform hover:-rotate-12 duration-200" />
-          )}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={isDark ? 'dark-sun' : 'light-moon'}
+              initial={{ y: -14, opacity: 0, rotate: -70, scale: 0.6 }}
+              animate={{ y: 0, opacity: 1, rotate: 0, scale: 1 }}
+              exit={{ y: 14, opacity: 0, rotate: 70, scale: 0.6 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="flex items-center justify-center"
+            >
+              {isDark ? (
+                <Sun size={18} className="text-warning drop-shadow-[0_0_6px_rgba(244,162,97,0.5)]" />
+              ) : (
+                <Moon size={18} className="text-pearl drop-shadow-[0_0_6px_rgba(13,148,136,0.35)]" />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </button>
 
         {/* Notifications */}

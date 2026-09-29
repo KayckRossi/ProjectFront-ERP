@@ -7,9 +7,9 @@ export function ThemeProvider({ children }) {
     return localStorage.getItem('nexora_theme') || 'dark';
   });
 
-  useEffect(() => {
+  const applyTheme = (newTheme) => {
     const root = document.documentElement;
-    if (theme === 'light') {
+    if (newTheme === 'light') {
       root.classList.add('light');
       root.classList.remove('dark');
       root.setAttribute('data-theme', 'light');
@@ -18,11 +18,26 @@ export function ThemeProvider({ children }) {
       root.classList.remove('light');
       root.setAttribute('data-theme', 'dark');
     }
-    localStorage.setItem('nexora_theme', theme);
+    localStorage.setItem('nexora_theme', newTheme);
+  };
+
+  useEffect(() => {
+    applyTheme(theme);
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+
+    // Suporte à View Transitions API para transição ultra-fluida
+    if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+      document.startViewTransition(() => {
+        setTheme(nextTheme);
+        applyTheme(nextTheme);
+      });
+    } else {
+      setTheme(nextTheme);
+      applyTheme(nextTheme);
+    }
   };
 
   return (

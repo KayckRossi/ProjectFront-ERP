@@ -39,12 +39,12 @@
 
   .light,
   [data-theme='light'] {
-    --color-onyx: 245 247 250;           /* #F5F7FA - Fundo leve e elegante */
+    --color-onyx: 248 250 252;           /* #F8FAFC - Fundo da página leve e nítido */
     --color-graphite: 255 255 255;       /* #FFFFFF - Cards e superfícies brancas */
     --color-graphite-hover: 241 245 249; /* #F1F5F9 */
-    --color-snow: 17 24 39;              /* #111827 - Texto escuro com contraste perfeito */
-    --color-pearl: 13 148 136;          /* #0D9488 - Teal escuro no modo claro */
-    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    --color-snow: 15 23 42;              /* #0F172A - Texto carvão de alto contraste */
+    --color-pearl: 13 148 136;          /* #0D9488 - Teal contrastante no claro */
+    --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 4px 14px -2px rgba(0, 0, 0, 0.05);
 
     --background: 210 20% 98%;
     --foreground: 222 47% 11%;
@@ -71,6 +71,9 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+    transition-duration: 0.25s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   body {
@@ -78,7 +81,6 @@
     color: rgb(var(--color-snow));
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
-    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   /* Scrollbar */
@@ -92,6 +94,37 @@
     outline: 2px solid rgb(var(--color-pearl));
     outline-offset: 2px;
   }
+}
+
+/* Ajustes visuais nítidos para o modo claro */
+.light [class*="border-\[rgba(125\,226\,209"],
+.light [class*="border-\[rgba(51\,153\,137"] {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.light [class*="card-shadow"] {
+  border: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+.light aside {
+  border-right-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.light header {
+  border-bottom-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Não interferir em drag and drop do Kanban */
+[data-rbd-draggable-context-id],
+[data-rbd-droppable-context-id] * {
+  transition: none !important;
+}
+
+/* Transições de tela View Transitions nativas */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.28s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @layer utilities {
