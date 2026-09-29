@@ -5,31 +5,66 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
+  :root,
+  .dark,
+  [data-theme='dark'] {
+    --color-onyx: 19 21 21;              /* #131515 */
+    --color-graphite: 43 44 40;          /* #2B2C28 */
+    --color-graphite-hover: 53 54 48;    /* #353630 */
+    --color-snow: 255 250 251;          /* #FFFAFB */
+    --color-pearl: 125 226 209;         /* #7DE2D1 */
+    --card-shadow: 0 4px 24px rgba(19, 21, 21, 0.4);
+
+    --background: 180 5% 7%;
+    --foreground: 350 100% 99%;
+    --card: 75 5% 16%;
+    --card-foreground: 350 100% 99%;
+    --popover: 75 5% 16%;
+    --popover-foreground: 350 100% 99%;
     --primary: 174 50% 39%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
+    --primary-foreground: 350 100% 99%;
+    --secondary: 75 5% 20%;
+    --secondary-foreground: 350 100% 99%;
+    --muted: 75 5% 20%;
+    --muted-foreground: 350 5% 65%;
     --accent: 167 57% 82%;
     --accent-foreground: 0 0% 9%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 174 50% 39%;
+    --border: 75 5% 22%;
+    --input: 75 5% 22%;
+    --ring: 167 57% 82%;
     --radius: 0.5rem;
-    --font-heading: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  .light,
+  [data-theme='light'] {
+    --color-onyx: 245 247 250;           /* #F5F7FA - Fundo leve e elegante */
+    --color-graphite: 255 255 255;       /* #FFFFFF - Cards e superfícies brancas */
+    --color-graphite-hover: 241 245 249; /* #F1F5F9 */
+    --color-snow: 17 24 39;              /* #111827 - Texto escuro com contraste perfeito */
+    --color-pearl: 13 148 136;          /* #0D9488 - Teal escuro no modo claro */
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 174 50% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 174 50% 39%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 174 50% 39%;
   }
 }
 
@@ -39,27 +74,28 @@
   }
 
   body {
-    background-color: #131515;
-    color: #FFFAFB;
+    background-color: rgb(var(--color-onyx));
+    color: rgb(var(--color-snow));
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   /* Scrollbar */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: #131515; }
-  ::-webkit-scrollbar-thumb { background: #2B2C28; border-radius: 8px; border: 2px solid #131515; }
-  ::-webkit-scrollbar-thumb:hover { background: #353630; }
+  ::-webkit-scrollbar-track { background: rgb(var(--color-onyx)); }
+  ::-webkit-scrollbar-thumb { background: rgb(var(--color-graphite)); border-radius: 8px; border: 2px solid rgb(var(--color-onyx)); }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--color-graphite-hover)); }
 
   /* Focus ring */
   :focus-visible {
-    outline: 2px solid #7DE2D1;
+    outline: 2px solid rgb(var(--color-pearl));
     outline-offset: 2px;
   }
 }
 
 @layer utilities {
-  .card-shadow { box-shadow: 0 4px 24px rgba(19,21,21,0.4); }
+  .card-shadow { box-shadow: var(--card-shadow); }
   .text-balance { text-wrap: balance; }
   .gradient-pearl { background: linear-gradient(135deg, rgba(125,226,209,0.18), rgba(51,153,137,0.06)); }
 }

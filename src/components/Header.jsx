@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, Menu, Sun, Moon, ChevronDown, User, LogOut } from 'lucide-react';
 import {
@@ -6,19 +5,20 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/AuthContext';
+import { useTheme } from '@/lib/ThemeContext';
 
 export default function Header({ onMenuClick }) {
-  const [dark, setDark] = useState(true);
+  const { isDark, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const name = user?.full_name || user?.email || 'Usuário';
   const initial = (name || 'U')[0].toUpperCase();
 
   return (
-    <header className="h-16 bg-graphite border-b border-[rgba(51,153,137,0.15)] flex items-center gap-3 px-4 md:px-6 shrink-0 z-30">
+    <header className="h-16 bg-graphite border-b border-[rgba(51,153,137,0.15)] flex items-center gap-3 px-4 md:px-6 shrink-0 z-30 transition-colors">
       <button
         onClick={onMenuClick}
-        className="md:hidden text-snow/70 hover:text-pearl p-1"
+        className="md:hidden text-snow/70 hover:text-pearl p-1 cursor-pointer"
         aria-label="Abrir menu"
       >
         <Menu size={22} />
@@ -31,18 +31,23 @@ export default function Header({ onMenuClick }) {
           type="text"
           placeholder="Buscar produtos, clientes, vendas..."
           aria-label="Buscar"
-          className="w-full h-10 bg-onyx text-snow placeholder:text-snow/40 rounded-lg pl-10 pr-4 border border-transparent focus:border-verdigris focus:outline-none transition-colors text-sm"
+          className="w-full h-10 bg-onyx text-snow placeholder:text-snow/40 rounded-lg pl-10 pr-4 border border-snow/10 focus:border-verdigris focus:outline-none transition-colors text-sm"
         />
       </div>
 
       <div className="flex items-center gap-1 md:gap-2 ml-auto">
-        {/* Dark mode toggle */}
+        {/* Dark / Light mode toggle */}
         <button
-          onClick={() => setDark(d => !d)}
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-snow/70 hover:text-pearl hover:bg-graphite-hover transition-colors"
-          aria-label="Alternar tema"
+          onClick={toggleTheme}
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-snow/70 hover:text-pearl hover:bg-graphite-hover transition-colors cursor-pointer"
+          aria-label={isDark ? "Mudar para modo dia (claro)" : "Mudar para modo noite (escuro)"}
+          title={isDark ? "Mudar para modo dia (claro)" : "Mudar para modo noite (escuro)"}
         >
-          {dark ? <Moon size={18} /> : <Sun size={18} />}
+          {isDark ? (
+            <Sun size={18} className="text-warning transition-transform hover:rotate-45 duration-200" />
+          ) : (
+            <Moon size={18} className="text-pearl transition-transform hover:-rotate-12 duration-200" />
+          )}
         </button>
 
         {/* Notifications */}

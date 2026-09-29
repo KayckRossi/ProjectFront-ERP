@@ -13,22 +13,22 @@ module.exports = {
   			modal: '0.75rem'
   		},
   		colors: {
-  			onyx: '#131515',
-  			graphite: '#2B2C28',
-  			'graphite-hover': '#353630',
+  			onyx: 'rgb(var(--color-onyx) / <alpha-value>)',
+  			graphite: 'rgb(var(--color-graphite) / <alpha-value>)',
+  			'graphite-hover': 'rgb(var(--color-graphite-hover) / <alpha-value>)',
   			verdigris: {
   				DEFAULT: '#339989',
   				hover: '#2A7A6E',
-  				light: 'rgba(51,153,137,0.10)'
+  				light: 'rgba(51,153,137,0.12)'
   			},
   			pearl: {
-  				DEFAULT: '#7DE2D1',
+  				DEFAULT: 'rgb(var(--color-pearl) / <alpha-value>)',
   				muted: 'rgba(125,226,209,0.20)'
   			},
-  			snow: '#FFFAFB',
+  			snow: 'rgb(var(--color-snow) / <alpha-value>)',
   			danger: '#E63946',
   			warning: '#F4A261',
-  			success: '#7DE2D1',
+  			success: '#339989',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
