@@ -10,6 +10,7 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
 import { safeReturnTo } from "@/lib/safeReturnTo";
+import { appParams } from "@/lib/app-params";
 
 export default function Cadastro() {
   const [email, setEmail] = useState("");
@@ -34,13 +35,27 @@ export default function Cadastro() {
       return;
     }
     setLoading(true);
-    try {
-      await base44.auth.register({ email, password });
-      setShowOtp(true);
-    } catch (err) {
-      setError(err?.message || "Falha ao criar conta. Tente novamente.");
-    } finally {
+
+    if (appParams.appId) {
+      try {
+        await base44.auth.register({ email, password });
+        setShowOtp(true);
+      } catch (err) {
+        setError(err?.message || "Falha ao criar conta. Tente novamente.");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Modo Demonstração sem backend: registra localmente e já conecta o usuário
+      const newUser = {
+        id: "user-" + Date.now(),
+        email,
+        full_name: email.split("@")[0],
+        role: "admin",
+      };
+      localStorage.setItem("nexora_demo_user", JSON.stringify(newUser));
       setLoading(false);
+      window.location.href = safeReturnTo();
     }
   };
 
@@ -74,7 +89,18 @@ export default function Cadastro() {
   };
 
   const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", safeReturnTo());
+    if (appParams.appId) {
+      base44.auth.loginWithProvider("google", safeReturnTo());
+    } else {
+      const demoUser = {
+        id: "google-user-01",
+        email: "novo.usuario@nexora.com",
+        full_name: "Novo Usuário (Google)",
+        role: "admin",
+      };
+      localStorage.setItem("nexora_demo_user", JSON.stringify(demoUser));
+      window.location.href = safeReturnTo();
+    }
   };
 
   if (showOtp) {

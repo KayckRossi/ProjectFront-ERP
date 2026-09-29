@@ -21,6 +21,31 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
+
+      // 1. Verifica se há uma sessão demo salva localmente para testes do front-end
+      const storedDemo = localStorage.getItem('nexora_demo_user');
+      if (storedDemo) {
+        try {
+          const parsed = JSON.parse(storedDemo);
+          setUser(parsed);
+          setIsAuthenticated(true);
+          setIsLoadingAuth(false);
+          setIsLoadingPublicSettings(false);
+          setAuthChecked(true);
+          return;
+        } catch {
+          localStorage.removeItem('nexora_demo_user');
+        }
+      }
+
+      // 2. Se não houver backend configurado, libera o front-end sem erros de rede
+      if (!appParams.appId) {
+        setIsLoadingPublicSettings(false);
+        setIsLoadingAuth(false);
+        setIsAuthenticated(false);
+        setAuthChecked(true);
+        return;
+      }
       
       try {
         const publicSettings = await base44.app.getPublicSettings();
@@ -101,10 +126,15 @@ export const AuthProvider = ({ children }) => {
   const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
+    localStorage.removeItem('nexora_demo_user');
     
     if (shouldRedirect) {
-      base44.auth.logout(window.location.href);
-    } else {
+      if (appParams.appId) {
+        base44.auth.logout(window.location.href);
+      } else {
+        window.location.href = '/login';
+      }
+    } else if (appParams.appId) {
       base44.auth.logout();
     }
   };
