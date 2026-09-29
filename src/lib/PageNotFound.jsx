@@ -1,1 +1,1 @@
-export { default } from '@/pages/PageNotFound';
+export { default } from '@/pages/PaginaNaoEncontrada';

@@ -7,7 +7,7 @@ import {
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/pos', label: 'Vendas / PDV', icon: ShoppingCart },
+  { to: '/pdv', label: 'Vendas / PDV', icon: ShoppingCart },
   { to: '/produtos', label: 'Produtos', icon: Package },
   { to: '/estoque', label: 'Estoque', icon: Boxes },
   { to: '/clientes', label: 'Clientes', icon: Users },

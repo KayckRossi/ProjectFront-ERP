@@ -7,10 +7,10 @@ import { DollarSign, ShoppingCart, AlertTriangle, TrendingUp } from 'lucide-reac
 import KpiCard from '@/components/KpiCard';
 import StatusBadge from '@/components/StatusBadge';
 import PageHeader from '@/components/PageHeader';
-import { recentSales, salesByDay, salesByCategory } from '@/lib/mockData';
+import { vendasRecentes, vendasPorDia, vendasPorCategoria } from '@/lib/mockData';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 
-const PIE_COLORS = ['#339989', '#7DE2D1', '#2A7A6E', '#5CBBB0', '#9AE8DB'];
+const CORES_PIE = ['#339989', '#7DE2D1', '#2A7A6E', '#5CBBB0', '#9AE8DB'];
 
 function ChartTooltip({ active, payload, label, formatter }) {
   if (!active || !payload?.length) return null;
@@ -37,10 +37,12 @@ export default function Dashboard() {
         <KpiCard icon={TrendingUp} label="Faturamento Mensal" value={18300} prefix="R$ " />
       </div>
 
-      {/* Charts */}
+      {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
           className="lg:col-span-2 bg-graphite rounded-card p-6 card-shadow"
         >
           <div className="flex items-center justify-between mb-4">
@@ -49,7 +51,7 @@ export default function Dashboard() {
           </div>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={salesByDay} margin={{ left: -20, right: 10, top: 10 }}>
+              <AreaChart data={vendasPorDia} margin={{ left: -20, right: 10, top: 10 }}>
                 <defs>
                   <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#339989" stopOpacity={0.5} />
@@ -57,7 +59,7 @@ export default function Dashboard() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(125,226,209,0.08)" vertical={false} />
-                <XAxis dataKey="day" stroke="#FFFAFB66" fontSize={12} tickLine={false} axisLine={false} />
+                <XAxis dataKey="dia" stroke="#FFFAFB66" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#FFFAFB66" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
                 <Tooltip content={<ChartTooltip formatter={formatCurrency} />} />
                 <Area type="monotone" dataKey="vendas" stroke="#339989" strokeWidth={2.5} fill="url(#salesGrad)" />
@@ -67,16 +69,18 @@ export default function Dashboard() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
           className="bg-graphite rounded-card p-6 card-shadow"
         >
           <h2 className="font-semibold text-snow mb-4">Vendas por Categoria</h2>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={salesByCategory} dataKey="value" nameKey="name" cx="50%" cy="45%" innerRadius={50} outerRadius={85} paddingAngle={3}>
-                  {salesByCategory.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="#2B2C28" strokeWidth={2} />
+                <Pie data={vendasPorCategoria} dataKey="valor" nameKey="nome" cx="50%" cy="45%" innerRadius={50} outerRadius={85} paddingAngle={3}>
+                  {vendasPorCategoria.map((_, i) => (
+                    <Cell key={i} fill={CORES_PIE[i % CORES_PIE.length]} stroke="#2B2C28" strokeWidth={2} />
                   ))}
                 </Pie>
                 <Tooltip content={<ChartTooltip formatter={formatCurrency} />} />
@@ -87,9 +91,11 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Recent sales */}
+      {/* Vendas recentes */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
         className="bg-graphite rounded-card p-6 card-shadow overflow-hidden"
       >
         <h2 className="font-semibold text-snow mb-4">Últimas Vendas</h2>
@@ -106,16 +112,21 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {recentSales.map((s) => (
-                <tr key={s.id} className="border-b border-[rgba(125,226,209,0.06)] hover:bg-graphite-hover transition-colors">
-                  <td className="py-3 px-2 font-mono text-pearl">#{s.id}</td>
-                  <td className="py-3 px-2 text-snow">{s.customer}</td>
-                  <td className="py-3 px-2 text-snow/70">{s.items}</td>
-                  <td className="py-3 px-2 text-snow/70">{formatDateTime(s.date)}</td>
-                  <td className="py-3 px-2 text-snow font-medium">{formatCurrency(s.total)}</td>
-                  <td className="py-3 px-2"><StatusBadge status={s.status} /></td>
-                </tr>
-              ))}
+              {vendasRecentes.map((s) => {
+                const cliente = s.cliente || s.customer;
+                const itens = s.itens ?? s.items;
+                const data = s.data || s.date;
+                return (
+                  <tr key={s.id} className="border-b border-[rgba(125,226,209,0.06)] hover:bg-graphite-hover transition-colors">
+                    <td className="py-3 px-2 font-mono text-pearl">#{s.id}</td>
+                    <td className="py-3 px-2 text-snow">{cliente}</td>
+                    <td className="py-3 px-2 text-snow/70">{itens}</td>
+                    <td className="py-3 px-2 text-snow/70">{formatDateTime(data)}</td>
+                    <td className="py-3 px-2 text-snow font-medium">{formatCurrency(s.total)}</td>
+                    <td className="py-3 px-2"><StatusBadge status={s.status} /></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

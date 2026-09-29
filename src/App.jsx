@@ -2,26 +2,28 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import PageNotFound from '@/pages/PageNotFound';
+import PaginaNaoEncontrada from '@/pages/PaginaNaoEncontrada';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Layout from '@/components/Layout';
-// Auth pages
+
+// Páginas de Autenticação
 import Login from '@/pages/Login';
-import Register from '@/pages/Register';
-import ForgotPassword from '@/pages/ForgotPassword';
-import ResetPassword from '@/pages/ResetPassword';
-// App pages
+import Cadastro from '@/pages/Cadastro';
+import EsqueciSenha from '@/pages/EsqueciSenha';
+import RedefinirSenha from '@/pages/RedefinirSenha';
+
+// Páginas do Sistema (ERP & PDV)
 import Dashboard from '@/pages/Dashboard';
-import POS from '@/pages/POS';
-import Products from '@/pages/Products';
-import Inventory from '@/pages/Inventory';
-import Customers from '@/pages/Customers';
-import Financial from '@/pages/Financial';
-import Reports from '@/pages/Reports';
-import Settings from '@/pages/Settings';
+import PDV from '@/pages/PDV';
+import Produtos from '@/pages/Produtos';
+import Estoque from '@/pages/Estoque';
+import Clientes from '@/pages/Clientes';
+import Financeiro from '@/pages/Financeiro';
+import Relatorios from '@/pages/Relatorios';
+import Configuracoes from '@/pages/Configuracoes';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -46,22 +48,27 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/cadastro" element={<Cadastro />} />
+      <Route path="/register" element={<Cadastro />} />
+      <Route path="/esqueci-senha" element={<EsqueciSenha />} />
+      <Route path="/forgot-password" element={<EsqueciSenha />} />
+      <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+      <Route path="/reset-password" element={<RedefinirSenha />} />
+
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/pos" element={<POS />} />
-          <Route path="/produtos" element={<Products />} />
-          <Route path="/estoque" element={<Inventory />} />
-          <Route path="/clientes" element={<Customers />} />
-          <Route path="/financeiro" element={<Financial />} />
-          <Route path="/relatorios" element={<Reports />} />
-          <Route path="/configuracoes" element={<Settings />} />
+          <Route path="/pdv" element={<PDV />} />
+          <Route path="/pos" element={<PDV />} />
+          <Route path="/produtos" element={<Produtos />} />
+          <Route path="/estoque" element={<Estoque />} />
+          <Route path="/clientes" element={<Clientes />} />
+          <Route path="/financeiro" element={<Financeiro />} />
+          <Route path="/relatorios" element={<Relatorios />} />
+          <Route path="/configuracoes" element={<Configuracoes />} />
         </Route>
       </Route>
-      <Route path="*" element={<PageNotFound />} />
+      <Route path="*" element={<PaginaNaoEncontrada />} />
     </Routes>
   );
 };
