@@ -20,7 +20,9 @@ function useCountUp(target, duration = 1200) {
 
 export default function KpiCard({ icon: Icon, label, value, prefix = '', suffix = '', accent = '#7DE2D1' }) {
   const animated = useCountUp(value);
-  const display = Number.isInteger(value) ? Math.round(animated) : animated.toFixed(2);
+  const display = Number.isInteger(value)
+    ? Math.round(animated).toLocaleString('pt-BR')
+    : animated.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
   return (
     <motion.div
@@ -33,7 +35,7 @@ export default function KpiCard({ icon: Icon, label, value, prefix = '', suffix 
         <div>
           <p className="text-sm text-snow/50 font-medium">{label}</p>
           <p className="text-2xl font-semibold text-snow mt-2 tracking-tight">
-            {prefix}{Number.isInteger(value) ? Math.round(animated).toLocaleString('pt-BR') : animated.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}{suffix}
+            {prefix}{display}{suffix}
           </p>
         </div>
         <div className="w-11 h-11 rounded-lg bg-verdigris-light flex items-center justify-center">
