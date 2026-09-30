@@ -5,12 +5,22 @@ import PageHeader from '@/components/PageHeader';
 function Alternador({ ativo, aoAlternar }) {
   return (
     <button
+      type="button"
       onClick={() => aoAlternar(!ativo)}
-      className={`w-11 h-6 rounded-full transition-colors relative ${ativo ? 'bg-verdigris' : 'bg-onyx'}`}
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-verdigris focus-visible:ring-offset-2 ${
+        ativo
+          ? 'bg-verdigris shadow-[0_0_10px_rgba(51,153,137,0.35)]'
+          : 'bg-slate-300 dark:bg-zinc-700 hover:bg-slate-400 dark:hover:bg-zinc-600'
+      }`}
       role="switch"
       aria-checked={ativo}
     >
-      <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-snow transition-transform ${ativo ? 'translate-x-5' : 'translate-x-0.5'}`} />
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-in-out ${
+          ativo ? 'translate-x-5' : 'translate-x-0'
+        }`}
+      />
     </button>
   );
 }
