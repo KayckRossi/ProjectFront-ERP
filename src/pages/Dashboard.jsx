@@ -7,6 +7,7 @@ import { DollarSign, ShoppingCart, AlertTriangle, TrendingUp } from 'lucide-reac
 import KpiCard from '@/components/KpiCard';
 import StatusBadge from '@/components/StatusBadge';
 import PageHeader from '@/components/PageHeader';
+import { useTheme } from '@/lib/ThemeContext';
 import { vendasRecentes, vendasPorDia, vendasPorCategoria } from '@/lib/mockData';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 
@@ -25,6 +26,12 @@ function ChartTooltip({ active, payload, label, formatter }) {
 }
 
 export default function Dashboard() {
+  const { isDark } = useTheme();
+  const axisColor = isDark ? 'rgba(255, 250, 251, 0.45)' : 'rgba(15, 23, 42, 0.60)';
+  const gridColor = isDark ? 'rgba(125, 226, 209, 0.08)' : 'rgba(15, 23, 42, 0.08)';
+  const cellStroke = isDark ? '#2B2C28' : '#FFFFFF';
+  const legendColor = isDark ? '#FFFAFB99' : '#0F172ACC';
+
   return (
     <div>
       <PageHeader title="Dashboard" subtitle="Visão geral do seu negócio em 29 de setembro de 2026" />
@@ -58,9 +65,9 @@ export default function Dashboard() {
                     <stop offset="100%" stopColor="#339989" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(125,226,209,0.08)" vertical={false} />
-                <XAxis dataKey="dia" stroke="#FFFAFB66" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#FFFAFB66" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                <XAxis dataKey="dia" stroke={axisColor} fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke={axisColor} fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
                 <Tooltip content={<ChartTooltip formatter={formatCurrency} />} />
                 <Area type="monotone" dataKey="vendas" stroke="#339989" strokeWidth={2.5} fill="url(#salesGrad)" />
               </AreaChart>
@@ -80,11 +87,11 @@ export default function Dashboard() {
               <PieChart>
                 <Pie data={vendasPorCategoria} dataKey="valor" nameKey="nome" cx="50%" cy="45%" innerRadius={50} outerRadius={85} paddingAngle={3}>
                   {vendasPorCategoria.map((_, i) => (
-                    <Cell key={i} fill={CORES_PIE[i % CORES_PIE.length]} stroke="#2B2C28" strokeWidth={2} />
+                    <Cell key={i} fill={CORES_PIE[i % CORES_PIE.length]} stroke={cellStroke} strokeWidth={2} />
                   ))}
                 </Pie>
                 <Tooltip content={<ChartTooltip formatter={formatCurrency} />} />
-                <Legend wrapperStyle={{ fontSize: 12, color: '#FFFAFB99' }} iconType="circle" />
+                <Legend wrapperStyle={{ fontSize: 12, color: legendColor }} iconType="circle" />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -100,15 +107,15 @@ export default function Dashboard() {
       >
         <h2 className="font-semibold text-snow mb-4">Últimas Vendas</h2>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="Tabela de últimas vendas">
             <thead>
               <tr className="text-left text-snow/50 border-b border-[rgba(125,226,209,0.10)]">
-                <th className="font-medium py-3 px-2">Código</th>
-                <th className="font-medium py-3 px-2">Cliente</th>
-                <th className="font-medium py-3 px-2">Itens</th>
-                <th className="font-medium py-3 px-2">Data</th>
-                <th className="font-medium py-3 px-2">Total</th>
-                <th className="font-medium py-3 px-2">Status</th>
+                <th scope="col" className="font-medium py-3 px-2">Código</th>
+                <th scope="col" className="font-medium py-3 px-2">Cliente</th>
+                <th scope="col" className="font-medium py-3 px-2">Itens</th>
+                <th scope="col" className="font-medium py-3 px-2">Data</th>
+                <th scope="col" className="font-medium py-3 px-2">Total</th>
+                <th scope="col" className="font-medium py-3 px-2">Status</th>
               </tr>
             </thead>
             <tbody>

@@ -50,6 +50,8 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
               key={item.to}
               to={item.to}
               end={item.end}
+              aria-label={item.label}
+              title={item.label}
               onClick={onCloseMobile}
               className={({ isActive }) =>
                 `relative flex items-center py-2.5 rounded-lg transition-all duration-200 group ${

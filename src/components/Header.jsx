@@ -69,11 +69,15 @@ export default function Header({ onMenuClick }) {
         >
           <Bell size={18} />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-verdigris ring-2 ring-graphite" />
+          <span className="sr-only">Novas notificações não lidas</span>
         </button>
 
         {/* User */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 pl-1 pr-2 h-10 rounded-lg hover:bg-graphite-hover transition-colors outline-none">
+          <DropdownMenuTrigger
+            className="flex items-center gap-2 pl-1 pr-2 h-10 rounded-lg hover:bg-graphite-hover transition-colors outline-none"
+            aria-label={`Menu de perfil de ${name}`}
+          >
             <div className="w-8 h-8 rounded-full bg-verdigris flex items-center justify-center text-snow font-semibold text-sm">
               {initial}
             </div>
