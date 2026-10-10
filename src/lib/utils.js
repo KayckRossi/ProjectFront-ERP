@@ -13,13 +13,21 @@ export const formatCurrency = (value) =>
 export const formatNumber = (value) =>
   new Intl.NumberFormat('pt-BR').format(value || 0);
 
+// "2026-09-29" seria interpretado como meia-noite UTC (dia anterior no Brasil);
+// datas sem horário são tratadas como data local.
+export const parseDate = (date) => {
+  if (typeof date !== 'string') return date;
+  const soData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  return soData ? new Date(+soData[1], +soData[2] - 1, +soData[3]) : new Date(date);
+};
+
 export const formatDate = (date) => {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = parseDate(date);
   return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
 };
 
 export const formatDateTime = (date) => {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = parseDate(date);
   return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(d);
 };
 
