@@ -2,10 +2,13 @@
 
 Este documento especifica todos os endpoints REST, formatos de dados (JSON) esperados no envio (`Request Body`) e os retornos esperados (`Response Body`) pelo Front-end.
 
+> **Situação atual do front-end:** a autenticação (seção 1) já consome a API quando `VITE_API_URL` está definida. Os demais módulos ainda usam dados locais (`src/lib/ErpDataContext.jsx`), com as mesmas regras descritas aqui, e serão ligados a estes endpoints. Os campos e regras abaixo refletem o que as telas já enviam e exibem.
+
 ---
 
 ## 📑 Índice dos Módulos
 
+0. [Convenções Gerais](#0-convenções-gerais)
 1. [Autenticação](#1-autenticação-apiauth)
 2. [Produtos & Categorias](#2-produtos--categorias-apiprodutos-e-apicategorias)
 3. [Estoque](#3-estoque-apiestoque)
@@ -18,10 +21,46 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
 
 ---
 
+## 0. Convenções Gerais
+
+- **Base URL**: definida no front pela variável `VITE_API_URL` (ex.: `http://localhost:3000`). Todas as rotas começam com `/api`.
+- **Formato**: `Content-Type: application/json` no envio e no retorno; campos em português e `camelCase`.
+- **Autenticação**: todas as rotas, exceto as marcadas como públicas na seção 1, exigem `Authorization: Bearer <access_token>`. Sem token ou com token inválido/expirado → `401`.
+- **CORS**: se a API estiver em outro domínio, liberar a origem do front e os headers `Content-Type` e `Authorization`.
+- **IDs**: sempre `string` (ex.: `"p1"`, `"c3"`, `"v1025"`, `"ped-107"`, `"t9"`).
+- **Valores monetários**: `number` em reais com até 2 casas decimais (ex.: `35.96`). Nunca strings formatadas.
+- **Datas**:
+  - Data com horário: ISO 8601 com fuso (ex.: `"2026-10-10T14:32:00-03:00"` ou `"2026-10-10T17:32:00Z"`).
+  - Data sem horário: `"AAAA-MM-DD"` (ex.: `"2026-09-29"`). O front exibe como data local, sem conversão de fuso.
+- **Listas**: retornam um array JSON diretamente (sem envelope).
+- **Criação/atualização**: `POST` e `PUT` retornam o **registro completo** salvo, para o front substituir o item na tela sem recarregar a lista.
+- **Erros**: status HTTP adequado e um corpo com a mensagem que o front exibe ao usuário:
+
+| Status | Quando usar |
+|---|---|
+| `400` | Dados inválidos (campo obrigatório ausente, valor fora da regra) |
+| `401` | Não autenticado, token inválido ou credenciais incorretas no login |
+| `403` | Autenticado, mas sem permissão |
+| `404` | Registro não encontrado |
+| `409` | Conflito (e-mail/SKU/documento duplicado, estoque insuficiente) |
+| `500` | Erro inesperado |
+
+```json
+{
+  "mensagem": "Estoque insuficiente para Feijão Carioca 1kg (disponível: 4)."
+}
+```
+
+---
+
 ## 1. Autenticação (`/api/auth`)
 
-### 1.1 Cadastro de Usuário
+> ✅ **Já consumido pelo front-end.** O token é salvo no navegador e enviado como `Bearer` em todas as requisições. Ao receber `401` em `GET /api/auth/me`, o front descarta o token e volta para a tela de login.
+> Login com Google existe apenas no modo demonstração; não há endpoint de OAuth neste contrato.
+
+### 1.1 Cadastro de Usuário (pública)
 - **Endpoint**: `POST /api/auth/register`
+- **Regras**: `password` com no mínimo 6 caracteres; e-mail já cadastrado → `409`.
 - **Request Body**:
 ```json
 {
@@ -29,7 +68,7 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
   "password": "SenhaSegura123!"
 }
 ```
-- **Response Body (`201 Created`)**:
+- **Response Body (`201 Created`)**: envia um código de 6 dígitos para o e-mail. O front então mostra a tela de verificação (1.2).
 ```json
 {
   "sucesso": true,
@@ -40,7 +79,7 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
 
 ---
 
-### 1.2 Verificação de OTP (Código de E-mail)
+### 1.2 Verificação de OTP (pública)
 - **Endpoint**: `POST /api/auth/verify-otp`
 - **Request Body**:
 ```json
@@ -49,7 +88,7 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
   "otpCode": "123456"
 }
 ```
-- **Response Body (`200 OK`)**:
+- **Response Body (`200 OK`)**: o usuário já sai autenticado. Código inválido ou expirado → `400`.
 ```json
 {
   "access_token": "jwt_token_aqui...",
@@ -64,7 +103,24 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
 
 ---
 
-### 1.3 Login
+### 1.3 Reenviar Código OTP (pública)
+- **Endpoint**: `POST /api/auth/resend-otp`
+- **Request Body**:
+```json
+{
+  "email": "usuario@empresa.com"
+}
+```
+- **Response Body (`200 OK`)**:
+```json
+{
+  "sucesso": true
+}
+```
+
+---
+
+### 1.4 Login (pública)
 - **Endpoint**: `POST /api/auth/login`
 - **Request Body**:
 ```json
@@ -85,13 +141,14 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
   }
 }
 ```
+- **Erros**: e-mail ou senha incorretos → **`401`** (o front exibe "E-mail ou senha incorretos"). Qualquer outro status exibe o campo `mensagem` retornado.
 
 ---
 
-### 1.4 Usuário Autenticado Atual
+### 1.5 Usuário Autenticado Atual
 - **Endpoint**: `GET /api/auth/me`
 - **Headers**: `Authorization: Bearer <token>`
-- **Response Body (`200 OK`)**:
+- **Response Body (`200 OK`)**: o campo `nome` é exibido no cabeçalho do sistema.
 ```json
 {
   "id": "usr_01",
@@ -103,24 +160,7 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
 
 ---
 
-### 1.5 Reenviar Código OTP
-- **Endpoint**: `POST /api/auth/resend-otp`
-- **Request Body**:
-```json
-{
-  "email": "usuario@empresa.com"
-}
-```
-- **Response Body (`200 OK`)**:
-```json
-{
-  "sucesso": true
-}
-```
-
----
-
-### 1.6 Solicitar Redefinição de Senha
+### 1.6 Solicitar Redefinição de Senha (pública)
 - **Endpoint**: `POST /api/auth/forgot-password`
 - **Request Body**:
 ```json
@@ -128,7 +168,7 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
   "email": "usuario@empresa.com"
 }
 ```
-- **Response Body (`200 OK`)**: sempre `200`, mesmo se o e-mail não existir (evita enumeração de contas). O e-mail enviado deve conter um link para `/redefinir-senha?token=<token>`.
+- **Response Body (`200 OK`)**: sempre `200`, mesmo se o e-mail não existir (evita descobrir contas cadastradas). O e-mail enviado deve conter um link para `<url-do-front>/redefinir-senha?token=<token>`.
 ```json
 {
   "sucesso": true
@@ -137,8 +177,9 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
 
 ---
 
-### 1.7 Redefinir Senha
+### 1.7 Redefinir Senha (pública)
 - **Endpoint**: `POST /api/auth/reset-password`
+- **Regras**: `password` com no mínimo 6 caracteres; token inválido ou expirado → `400`.
 - **Request Body**:
 ```json
 {
@@ -146,23 +187,12 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
   "password": "NovaSenhaSegura123!"
 }
 ```
-- **Response Body (`200 OK`)**:
+- **Response Body (`200 OK`)**: o front redireciona para o login.
 ```json
 {
   "sucesso": true
 }
 ```
-
----
-
-### Erros (todos os endpoints)
-Respostas de erro devem usar o status HTTP adequado (`400`, `401`, `403`, `404`, `409`, `500`) e um corpo com a mensagem exibida ao usuário:
-```json
-{
-  "mensagem": "E-mail ou senha incorretos."
-}
-```
-O front-end envia `Authorization: Bearer <access_token>` em todas as rotas autenticadas e encerra a sessão ao receber `401` em `GET /api/auth/me`.
 
 ---
 
@@ -185,7 +215,10 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 2.2 Listar Produtos
 - **Endpoint**: `GET /api/produtos`
-- **Query Params opcionais**: `?categoria=bebidas&busca=cola`
+- **Query Params opcionais**:
+  - `categoria` — id da categoria (ex.: `bebidas`)
+  - `busca` — procura no **nome ou SKU**, sem diferenciar maiúsculas
+  - `codigoBarras` — busca exata, usada pelo leitor de código de barras do PDV (também deve aceitar o SKU)
 - **Response Body (`200 OK`)**:
 ```json
 [
@@ -218,6 +251,13 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 2.3 Criar Produto
 - **Endpoint**: `POST /api/produtos`
+- **Regras de validação** (as mesmas aplicadas no formulário; violação → `400`):
+  - `nome` obrigatório (o front envia sem espaços nas pontas)
+  - `preco` > 0 e `preco` ≥ `custo`
+  - `estoque` e `estoqueMinimo` inteiros ≥ 0
+  - `categoria` deve existir em `/api/categorias`
+  - `sku` é enviado em **maiúsculas** e deve ser único → duplicado retorna `409`
+  - `codigoBarras` é opcional: o formulário não tem esse campo, então o **backend deve gerar** um código quando ele não for enviado
 - **Request Body**:
 ```json
 {
@@ -227,8 +267,7 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
   "custo": 1.50,
   "preco": 4.00,
   "estoque": 50,
-  "estoqueMinimo": 10,
-  "codigoBarras": "7891234560049"
+  "estoqueMinimo": 10
 }
 ```
 - **Response Body (`201 Created`)**:
@@ -242,7 +281,7 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
   "preco": 4.00,
   "estoque": 50,
   "estoqueMinimo": 10,
-  "codigoBarras": "7891234560049"
+  "codigoBarras": "7891234560134"
 }
 ```
 
@@ -250,7 +289,8 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 2.4 Atualizar Produto
 - **Endpoint**: `PUT /api/produtos/:id`
-- **Request Body**:
+- **Regras**: as mesmas da criação. Produto inexistente → `404`.
+- **Request Body**: mesmos campos da criação (`codigoBarras` ausente = manter o atual).
 ```json
 {
   "nome": "Água com Gás 500ml",
@@ -259,15 +299,21 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
   "custo": 1.60,
   "preco": 4.50,
   "estoque": 65,
-  "estoqueMinimo": 15,
-  "codigoBarras": "7891234560049"
+  "estoqueMinimo": 15
 }
 ```
-- **Response Body (`200 OK`)**:
+- **Response Body (`200 OK`)**: o produto completo atualizado.
 ```json
 {
-  "sucesso": true,
-  "mensagem": "Produto atualizado com sucesso"
+  "id": "p13",
+  "nome": "Água com Gás 500ml",
+  "sku": "BEB004",
+  "categoria": "bebidas",
+  "custo": 1.60,
+  "preco": 4.50,
+  "estoque": 65,
+  "estoqueMinimo": 15,
+  "codigoBarras": "7891234560134"
 }
 ```
 
@@ -275,6 +321,7 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 2.5 Excluir Produto
 - **Endpoint**: `DELETE /api/produtos/:id`
+- **Observação**: vendas antigas guardam o nome do produto (5.1), então o histórico continua legível após a exclusão.
 - **Response Body (`200 OK`)**:
 ```json
 {
@@ -287,8 +334,24 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ## 3. Estoque (`/api/estoque`)
 
+### Regra de status de estoque
+O mesmo cálculo é usado no front (`src/lib/estoque.js`) para os filtros e o card "Produtos em Baixa":
+
+| Status | Condição |
+|---|---|
+| `"Sem Estoque"` | `estoque == 0` |
+| `"Crítico"` | `estoque < estoqueMinimo` |
+| `"Baixo"` | `estoque < estoqueMinimo × 1,5` |
+| `"OK"` | demais casos |
+
+---
+
 ### 3.1 Consulta de Níveis de Estoque
 - **Endpoint**: `GET /api/estoque`
+- **Query Params opcionais**:
+  - `filtro=baixo` — produtos com estoque > 0 e status `Crítico` ou `Baixo`
+  - `filtro=sem-estoque` — produtos com estoque 0
+  - `busca` — nome ou SKU
 - **Response Body (`200 OK`)**:
 ```json
 [
@@ -315,10 +378,42 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ---
 
+### 3.2 Movimentar Estoque (Entrada / Saída)
+Botão **Movimentar** da tela de Estoque.
+- **Endpoint**: `POST /api/estoque/movimentacoes`
+- **Regras**:
+  - `tipo`: `"entrada"` (soma) ou `"saida"` (subtrai: perda, avaria, uso interno)
+  - `quantidade`: inteiro > 0
+  - saída maior que o estoque atual → `409`
+  - vendas do PDV **não** usam este endpoint; a baixa é feita pelo `POST /api/vendas`
+- **Request Body**:
+```json
+{
+  "produtoId": "p5",
+  "tipo": "entrada",
+  "quantidade": 20
+}
+```
+- **Response Body (`201 Created`)**: o produto com o estoque atualizado.
+```json
+{
+  "id": "p5",
+  "nome": "Feijão Carioca 1kg",
+  "sku": "ALI002",
+  "categoria": "alimentos",
+  "estoque": 24,
+  "estoqueMinimo": 10,
+  "status": "OK"
+}
+```
+
+---
+
 ## 4. Clientes (`/api/clientes`)
 
 ### 4.1 Listar Clientes
 - **Endpoint**: `GET /api/clientes`
+- **Query Params opcionais**: `busca` — procura no nome, e-mail ou documento (no documento, comparar **apenas os dígitos**: `12345678900` deve encontrar `123.456.789-00`).
 - **Response Body (`200 OK`)**:
 ```json
 [
@@ -345,6 +440,12 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 4.2 Cadastrar Cliente
 - **Endpoint**: `POST /api/clientes`
+- **Regras de validação** (violação → `400`):
+  - `nome` obrigatório
+  - `documento` opcional; quando enviado tem 11 dígitos (CPF) ou 14 (CNPJ). O front envia **com máscara** (`123.456.789-00` / `12.345.678/0001-90`). Documento já cadastrado → `409`
+  - `telefone` opcional, enviado com máscara (`(11) 3333-4444` ou `(11) 97777-8888`)
+  - `email` opcional; quando enviado deve ser válido
+  - `totalCompras` **não** é enviado: começa em `0` e é atualizado pelas vendas (5.1)
 - **Request Body**:
 ```json
 {
@@ -370,6 +471,7 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 4.3 Atualizar Cliente
 - **Endpoint**: `PUT /api/clientes/:id`
+- **Regras**: as mesmas do cadastro. `totalCompras` não é alterado por esta rota.
 - **Request Body**:
 ```json
 {
@@ -379,11 +481,15 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
   "email": "lucas.silva@email.com"
 }
 ```
-- **Response Body (`200 OK`)**:
+- **Response Body (`200 OK`)**: o cliente completo atualizado.
 ```json
 {
-  "sucesso": true,
-  "mensagem": "Cliente atualizado com sucesso"
+  "id": "c9",
+  "nome": "Lucas Martins da Silva",
+  "documento": "333.444.555-66",
+  "telefone": "(11) 97777-8888",
+  "email": "lucas.silva@email.com",
+  "totalCompras": 0.00
 }
 ```
 
@@ -391,6 +497,7 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 4.4 Excluir Cliente
 - **Endpoint**: `DELETE /api/clientes/:id`
+- **Observação**: vendas e pedidos guardam o nome do cliente, então o histórico continua legível após a exclusão.
 - **Response Body (`200 OK`)**:
 ```json
 {
@@ -405,50 +512,88 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 5.1 Finalizar Venda (Checkout PDV)
 - **Endpoint**: `POST /api/vendas`
+- **Campos**:
+  - `clienteId`: id do cliente ou `null` para **"Consumidor final"**
+  - `formaPagamento`: `"dinheiro"`, `"cartao"` ou `"pix"`
+  - `descontoPercentual`: de `0` a `100` (o PDV oferece 5%, 10%, 15% ou valor livre)
+  - `subtotal`, `desconto` (em R$), `total`: valores calculados pelo front, enviados para conferência
+  - `valorRecebido` e `troco`: apenas quando `formaPagamento` = `"dinheiro"`; caso contrário `null`
+  - `itens[].quantidade`: **inteiro** ≥ 1 (o PDV não vende fracionado)
+- **Validações do backend**:
+  - recalcular os valores com os **preços do banco**: `subtotal = Σ preco × quantidade`, `desconto = arredondar(subtotal × descontoPercentual / 100, 2)`, `total = subtotal − desconto`. Divergência → `400`
+  - estoque insuficiente em qualquer item → `409`, informando o produto na `mensagem`
+  - pagamento em dinheiro com `valorRecebido < total` → `400`
+  - carrinho vazio → `400`
+- **Efeitos (na mesma transação do banco)**:
+  1. baixa `quantidade` do estoque de cada produto
+  2. cria a venda com status `"Concluída"` e o próximo número sequencial
+  3. cria um pedido no Kanban com status `"pendente"` (seção 6)
+  4. lança uma transação de **entrada** no financeiro: descrição `"Venda PDV #<numero>"`, categoria `"Vendas"`, data do dia (seção 7)
+  5. se houver `clienteId`, soma `total` ao `totalCompras` do cliente
 - **Request Body**:
 ```json
 {
   "clienteId": "c1",
-  "formaPagamento": "pix",
-  "subtotal": 56.88,
-  "desconto": 0.00,
-  "total": 56.88,
-  "valorRecebido": 56.88,
-  "troco": 0.00,
+  "formaPagamento": "dinheiro",
+  "descontoPercentual": 10,
+  "subtotal": 39.96,
+  "desconto": 4.00,
+  "total": 35.96,
+  "valorRecebido": 50.00,
+  "troco": 14.04,
   "itens": [
     {
-      "produtoId": "p1",
-      "nome": "Refrigerante Cola 2L",
-      "quantidade": 2,
-      "precoUnitario": 8.99,
-      "totalItem": 17.98
-    },
-    {
-      "produtoId": "p4",
-      "nome": "Arroz Branco 5kg",
-      "quantidade": 1,
-      "precoUnitario": 27.90,
-      "totalItem": 27.90
-    },
-    {
-      "produtoId": "p11",
-      "nome": "Pão Francês kg",
-      "quantidade": 0.85,
-      "precoUnitario": 12.90,
-      "totalItem": 10.97
+      "produtoId": "p5",
+      "quantidade": 4,
+      "precoUnitario": 9.99
     }
   ]
 }
 ```
-- **Response Body (`201 Created`)**:
+- **Response Body (`201 Created`)**: `numero` aparece na confirmação do PDV ("Venda #1025 finalizada").
 ```json
 {
   "id": "v1025",
+  "numero": 1025,
+  "pedidoId": "ped-107",
+  "cliente": "Ana Beatriz Souza",
   "status": "Concluída",
-  "total": 56.88,
-  "data": "2026-09-29T15:35:00",
-  "mensagem": "Venda finalizada com sucesso."
+  "itens": 4,
+  "subtotal": 39.96,
+  "desconto": 4.00,
+  "total": 35.96,
+  "troco": 14.04,
+  "formaPagamento": "dinheiro",
+  "data": "2026-10-10T14:35:00-03:00"
 }
+```
+*(`cliente` é `"Consumidor final"` quando `clienteId` é `null`; `itens` é a soma das quantidades.)*
+
+---
+
+### 5.2 Últimas Vendas
+- **Endpoint**: `GET /api/vendas/recentes`
+- **Query Params opcionais**: `limite` (padrão `6`, usado no Dashboard)
+- **Response Body (`200 OK`)**: ordenado da mais recente para a mais antiga. `status`: `"Concluída"`, `"Pendente"` ou `"Cancelada"`.
+```json
+[
+  {
+    "id": "v1025",
+    "cliente": "Ana Beatriz Souza",
+    "total": 35.96,
+    "status": "Concluída",
+    "itens": 4,
+    "data": "2026-10-10T14:35:00-03:00"
+  },
+  {
+    "id": "v1024",
+    "cliente": "Ana Beatriz Souza",
+    "total": 87.40,
+    "status": "Concluída",
+    "itens": 5,
+    "data": "2026-09-29T14:32:00-03:00"
+  }
+]
 ```
 
 ---
@@ -457,17 +602,17 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 6.1 Listar Pedidos do Kanban
 - **Endpoint**: `GET /api/pedidos`
-- **Response Body (`200 OK`)**:
+- **Response Body (`200 OK`)**: ordenado do mais recente para o mais antigo. `pagamento` vem já como texto de exibição: `"Dinheiro"`, `"Cartão"` ou `"PIX"`. `cliente` pode ser `"Consumidor final"`.
 ```json
 [
   {
-    "id": "ped-101",
-    "cliente": "João Pedro Alves",
-    "total": 56.20,
+    "id": "ped-107",
+    "cliente": "Ana Beatriz Souza",
+    "total": 35.96,
     "status": "pendente",
-    "itens": 3,
-    "pagamento": "PIX",
-    "data": "2026-09-29T14:40:00"
+    "itens": 4,
+    "pagamento": "Dinheiro",
+    "data": "2026-10-10T14:35:00-03:00"
   },
   {
     "id": "ped-103",
@@ -476,7 +621,7 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
     "status": "em_preparo",
     "itens": 5,
     "pagamento": "Dinheiro",
-    "data": "2026-09-29T14:20:00"
+    "data": "2026-09-29T14:20:00-03:00"
   },
   {
     "id": "ped-105",
@@ -485,7 +630,7 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
     "status": "finalizado",
     "itens": 18,
     "pagamento": "PIX",
-    "data": "2026-09-29T13:50:00"
+    "data": "2026-09-29T13:50:00-03:00"
   }
 ]
 ```
@@ -494,17 +639,17 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 6.2 Atualizar Status do Pedido (Arrastar Card no Kanban)
 - **Endpoint**: `PATCH /api/pedidos/:id/status`
+- **Regras**: valores válidos: `"pendente"`, `"em_preparo"`, `"finalizado"`. O card pode ser arrastado para qualquer coluna, inclusive para trás. Valor inválido → `400`; pedido inexistente → `404`.
 - **Request Body**:
 ```json
 {
   "status": "em_preparo"
 }
 ```
-*(Valores válidos para status: `"pendente"`, `"em_preparo"`, `"finalizado"`)*
 - **Response Body (`200 OK`)**:
 ```json
 {
-  "id": "ped-101",
+  "id": "ped-107",
   "status": "em_preparo",
   "mensagem": "Status do pedido atualizado com sucesso"
 }
@@ -514,18 +659,25 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ## 7. Financeiro (`/api/financeiro`)
 
+### Categorias de movimentação
+Usadas no formulário de nova movimentação:
+- **Saída**: `"Fornecedores"`, `"Fixos"`, `"Pessoal"`, `"Impostos"`, `"Outros"`
+- **Entrada**: `"Vendas"`, `"Serviços"`, `"Outros"`
+
+---
+
 ### 7.1 Listar Movimentações / Transações
 - **Endpoint**: `GET /api/financeiro/transacoes`
-- **Query Params opcionais**: `?tipo=entrada` ou `?tipo=saida`
-- **Response Body (`200 OK`)**:
+- **Query Params opcionais**: `tipo` (`entrada` ou `saida`), `dataInicio` e `dataFim` (`AAAA-MM-DD`)
+- **Response Body (`200 OK`)**: ordenado por `data` decrescente. Os cards de Receitas, Despesas e Lucro Líquido são somados pelo front a partir desta lista, e a exportação CSV também é feita pelo front.
 ```json
 [
   {
-    "id": "t1",
-    "descricao": "Venda PDV #1024",
+    "id": "t9",
+    "descricao": "Venda PDV #1025",
     "tipo": "entrada",
-    "valor": 87.40,
-    "data": "2026-09-29",
+    "valor": 35.96,
+    "data": "2026-10-10",
     "categoria": "Vendas"
   },
   {
@@ -551,6 +703,12 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 7.2 Cadastrar Nova Movimentação
 - **Endpoint**: `POST /api/financeiro/transacoes`
+- **Regras de validação** (violação → `400`):
+  - `descricao` obrigatória
+  - `valor` > 0 (sempre positivo; o sinal vem do `tipo`)
+  - `tipo`: `"entrada"` ou `"saida"`
+  - `categoria` deve ser uma das listadas acima para o `tipo` informado
+  - `data` no formato `AAAA-MM-DD` (o formulário sugere a data de hoje)
 - **Request Body**:
 ```json
 {
@@ -564,7 +722,7 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 - **Response Body (`201 Created`)**:
 ```json
 {
-  "id": "t9",
+  "id": "t10",
   "descricao": "Conta de Internet Fibra",
   "tipo": "saida",
   "valor": 149.90,
@@ -577,15 +735,16 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 7.3 Balanço Financeiro Mensal (Gráfico Receitas x Despesas)
 - **Endpoint**: `GET /api/financeiro/mensal`
-- **Response Body (`200 OK`)**:
+- **Query Params opcionais**: `meses` (padrão `6`)
+- **Response Body (`200 OK`)**: do mês mais antigo para o mais recente. `mes` é o rótulo exibido no gráfico; `anoMes` identifica o período.
 ```json
 [
-  { "mes": "Abr", "receitas": 12400, "despesas": 8200 },
-  { "mes": "Mai", "receitas": 13900, "despesas": 7800 },
-  { "mes": "Jun", "receitas": 15200, "despesas": 9100 },
-  { "mes": "Jul", "receitas": 14600, "despesas": 8600 },
-  { "mes": "Ago", "receitas": 16800, "despesas": 9400 },
-  { "mes": "Set", "receitas": 18300, "despesas": 10100 }
+  { "anoMes": "2026-05", "mes": "Mai", "receitas": 13900, "despesas": 7800 },
+  { "anoMes": "2026-06", "mes": "Jun", "receitas": 15200, "despesas": 9100 },
+  { "anoMes": "2026-07", "mes": "Jul", "receitas": 14600, "despesas": 8600 },
+  { "anoMes": "2026-08", "mes": "Ago", "receitas": 16800, "despesas": 9400 },
+  { "anoMes": "2026-09", "mes": "Set", "receitas": 18300, "despesas": 10100 },
+  { "anoMes": "2026-10", "mes": "Out", "receitas": 3120, "despesas": 1480 }
 ]
 ```
 
@@ -595,6 +754,11 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 8.1 KPIs do Dashboard
 - **Endpoint**: `GET /api/dashboard/kpis`
+- **Cálculos**:
+  - `vendasHoje`: soma do `total` das vendas `"Concluída"` do dia
+  - `ticketMedio`: `vendasHoje ÷ quantidade de vendas do dia` (0 se não houver vendas)
+  - `produtosEmBaixa`: produtos com status `"Sem Estoque"`, `"Crítico"` ou `"Baixo"` (seção 3)
+  - `faturamentoMensal`: soma das vendas `"Concluída"` do mês corrente
 - **Response Body (`200 OK`)**:
 ```json
 {
@@ -607,20 +771,20 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ---
 
-### 8.2 Vendas por Dia (Gráfico de Área)
+### 8.2 Vendas por Dia (Gráfico de Área / Barras)
 - **Endpoint**: `GET /api/relatorios/vendas-por-dia`
-- **Query Params**: `?dataInicio=2026-09-01&dataFim=2026-09-29`
-- **Response Body (`200 OK`)**:
+- **Query Params**: `dataInicio` e `dataFim` (`AAAA-MM-DD`, inclusive). Sem parâmetros: últimos 8 dias (Dashboard). `dataInicio > dataFim` → `400`.
+- **Response Body (`200 OK`)**: um item por dia do período, **incluindo dias sem venda** (`vendas: 0`), em ordem cronológica. `data` é usada no filtro e no CSV; `dia` é o rótulo do gráfico. O card "Faturamento no período" é a soma de `vendas`.
 ```json
 [
-  { "dia": "22/09", "vendas": 1240 },
-  { "dia": "23/09", "vendas": 980 },
-  { "dia": "24/09", "vendas": 1560 },
-  { "dia": "25/09", "vendas": 1320 },
-  { "dia": "26/09", "vendas": 2100 },
-  { "dia": "27/09", "vendas": 2890 },
-  { "dia": "28/09", "vendas": 2450 },
-  { "dia": "29/09", "vendas": 1870 }
+  { "data": "2026-09-22", "dia": "22/09", "vendas": 1240 },
+  { "data": "2026-09-23", "dia": "23/09", "vendas": 980 },
+  { "data": "2026-09-24", "dia": "24/09", "vendas": 1560 },
+  { "data": "2026-09-25", "dia": "25/09", "vendas": 1320 },
+  { "data": "2026-09-26", "dia": "26/09", "vendas": 2100 },
+  { "data": "2026-09-27", "dia": "27/09", "vendas": 2890 },
+  { "data": "2026-09-28", "dia": "28/09", "vendas": 2450 },
+  { "data": "2026-09-29", "dia": "29/09", "vendas": 1870 }
 ]
 ```
 
@@ -628,7 +792,8 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 8.3 Vendas por Categoria (Gráfico Donut/Pizza)
 - **Endpoint**: `GET /api/relatorios/vendas-por-categoria`
-- **Response Body (`200 OK`)**:
+- **Query Params opcionais**: `dataInicio` e `dataFim` (`AAAA-MM-DD`)
+- **Response Body (`200 OK`)**: ordenado por `valor` decrescente.
 ```json
 [
   { "nome": "Bebidas", "valor": 3420 },
@@ -643,7 +808,8 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 8.4 Top Produtos Mais Vendidos
 - **Endpoint**: `GET /api/relatorios/produtos-mais-vendidos`
-- **Response Body (`200 OK`)**:
+- **Query Params opcionais**: `dataInicio`, `dataFim` e `limite` (padrão `5`)
+- **Response Body (`200 OK`)**: ordenado por `vendas` (unidades) decrescente.
 ```json
 [
   { "nome": "Arroz Branco 5kg", "vendas": 142, "receita": 3961.80 },
@@ -658,7 +824,8 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 8.5 Melhores Clientes
 - **Endpoint**: `GET /api/relatorios/melhores-clientes`
-- **Response Body (`200 OK`)**:
+- **Query Params opcionais**: `dataInicio`, `dataFim` e `limite` (padrão `5`)
+- **Response Body (`200 OK`)**: ordenado por `total` decrescente. Vendas para "Consumidor final" não entram.
 ```json
 [
   { "nome": "Mercado Central LTDA", "total": 12450.00, "compras": 38 },
@@ -671,45 +838,13 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ---
 
-### 8.6 Últimas Vendas do Dashboard
-- **Endpoint**: `GET /api/vendas/recentes`
-- **Response Body (`200 OK`)**:
-```json
-[
-  {
-    "id": "v1024",
-    "cliente": "Ana Beatriz Souza",
-    "total": 87.40,
-    "status": "Concluída",
-    "itens": 5,
-    "data": "2026-09-29T14:32:00"
-  },
-  {
-    "id": "v1023",
-    "cliente": "Mercado Central LTDA",
-    "total": 423.90,
-    "status": "Concluída",
-    "itens": 18,
-    "data": "2026-09-29T13:10:00"
-  },
-  {
-    "id": "v1022",
-    "cliente": "João Pedro Alves",
-    "total": 56.20,
-    "status": "Pendente",
-    "itens": 3,
-    "data": "2026-09-29T12:45:00"
-  }
-]
-```
-
----
-
 ## 9. Configurações (`/api/configuracoes`)
+
+> A tela de Configurações ainda não salva estes dados; os campos abaixo são os que ela exibe. A opção **Restaurar dados de demonstração** é exclusiva do modo demonstração e não tem endpoint.
 
 ### 9.1 Obter Configurações
 - **Endpoint**: `GET /api/configuracoes`
-- **Response Body (`200 OK`)**:
+- **Response Body (`200 OK`)**: `impressao.modelo` é um de `"Térmica 80mm"`, `"Térmica 58mm"` ou `"A4"`.
 ```json
 {
   "loja": {
@@ -735,7 +870,7 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
 
 ### 9.2 Atualizar Configurações
 - **Endpoint**: `PUT /api/configuracoes`
-- **Request Body**:
+- **Request Body**: o objeto completo (mesmo formato do 9.1).
 ```json
 {
   "loja": {
@@ -756,10 +891,17 @@ O front-end envia `Authorization: Bearer <access_token>` em todas as rotas auten
   }
 }
 ```
-- **Response Body (`200 OK`)**:
+- **Response Body (`200 OK`)**: as configurações salvas (mesmo formato do 9.1).
+
+---
+
+### 9.3 Encerrar Outras Sessões
+Botão **Encerrar outras sessões** da seção Segurança.
+- **Endpoint**: `POST /api/auth/sessions/revoke-others`
+- **Response Body (`200 OK`)**: invalida todos os tokens do usuário, exceto o da requisição atual.
 ```json
 {
   "sucesso": true,
-  "mensagem": "Configurações salvas com sucesso"
+  "sessoesEncerradas": 2
 }
 ```
