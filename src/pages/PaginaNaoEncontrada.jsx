@@ -1,22 +1,11 @@
 import { useLocation } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function PaginaNaoEncontrada() {
   const location = useLocation();
   const nomePagina = location.pathname.substring(1);
 
-  const { data: authData, isFetched } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      try {
-        const user = await base44.auth.me();
-        return { user, isAuthenticated: true };
-      } catch {
-        return { user: null, isAuthenticated: false };
-      }
-    }
-  });
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-onyx">
@@ -35,7 +24,7 @@ export default function PaginaNaoEncontrada() {
           </p>
         </div>
 
-        {isFetched && authData?.isAuthenticated && authData.user?.role === 'admin' && (
+        {user?.role === 'admin' && (
           <div className="mt-8 p-4 bg-graphite rounded-lg border border-[rgba(125,226,209,0.15)] text-left">
             <p className="text-sm font-medium text-snow">Nota do Administrador</p>
             <p className="text-sm text-snow/60 mt-1">

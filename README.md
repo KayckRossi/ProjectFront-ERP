@@ -1,11 +1,10 @@
 # 📦 ProjectFront-ERP — Nexora ERP & PDV
 
-Sistema completo de Gestão Empresarial (ERP) integrado com Ponto de Venda (PDV) e Kanban de Pedidos em tempo real. Desenvolvido com React, Vite, Tailwind CSS e Base44.
+Sistema completo de Gestão Empresarial (ERP) integrado com Ponto de Venda (PDV) e Kanban de Pedidos em tempo real. Desenvolvido com React, Vite e Tailwind CSS, consumindo uma API REST própria.
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat&logo=vite&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
-![Base44](https://img.shields.io/badge/Base44-SDK-339989?style=flat)
 
 ---
 
@@ -75,7 +74,7 @@ Enquanto o backend não está conectado, produtos, clientes, vendas, pedidos e m
 - **Drag and Drop**: [@hello-pangea/dnd](https://github.com/hello-pangea/dnd)
 - **Gráficos**: [Recharts](https://recharts.org/)
 - **Ícones**: [Lucide React](https://lucide.dev/)
-- **Backend / SDK**: [Base44 SDK](https://docs.base44.com/)
+- **Backend**: API REST própria via `fetch` (contrato em [`CONTRATO_API_BACKEND.md`](CONTRATO_API_BACKEND.md))
 
 ---
 
@@ -98,12 +97,18 @@ cd ProjectFront-ERP
 npm install
 ```
 
-3. Inicie o servidor de desenvolvimento:
+3. (Opcional) Conecte ao backend copiando `.env.example` para `.env.local` e preenchendo `VITE_API_URL`:
+```bash
+cp .env.example .env.local
+```
+Sem essa variável o sistema roda em **modo demonstração**: login local (`admin@nexora.com` / `admin123`) e dados salvos no navegador.
+
+4. Inicie o servidor de desenvolvimento:
 ```bash
 npm run dev
 ```
 
-4. Acesse no navegador:
+5. Acesse no navegador:
 ```
 http://localhost:5173
 ```
@@ -122,7 +127,7 @@ http://localhost:5173
 
 ```
 ├── src/
-│   ├── api/            # Configurações do SDK Base44 e Query Client
+│   ├── api/            # Cliente HTTP (http.js) e autenticação (auth.js)
 │   ├── components/     # Componentes estruturais (Sidebar, Header, Layout, OrderKanban)
 │   │   └── ui/         # Componentes primitivos (Radix UI / Shadcn)
 │   ├── hooks/          # Hooks customizados (useIsMobile, useSize)

@@ -103,6 +103,69 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
 
 ---
 
+### 1.5 Reenviar Código OTP
+- **Endpoint**: `POST /api/auth/resend-otp`
+- **Request Body**:
+```json
+{
+  "email": "usuario@empresa.com"
+}
+```
+- **Response Body (`200 OK`)**:
+```json
+{
+  "sucesso": true
+}
+```
+
+---
+
+### 1.6 Solicitar Redefinição de Senha
+- **Endpoint**: `POST /api/auth/forgot-password`
+- **Request Body**:
+```json
+{
+  "email": "usuario@empresa.com"
+}
+```
+- **Response Body (`200 OK`)**: sempre `200`, mesmo se o e-mail não existir (evita enumeração de contas). O e-mail enviado deve conter um link para `/redefinir-senha?token=<token>`.
+```json
+{
+  "sucesso": true
+}
+```
+
+---
+
+### 1.7 Redefinir Senha
+- **Endpoint**: `POST /api/auth/reset-password`
+- **Request Body**:
+```json
+{
+  "token": "token_recebido_por_email",
+  "password": "NovaSenhaSegura123!"
+}
+```
+- **Response Body (`200 OK`)**:
+```json
+{
+  "sucesso": true
+}
+```
+
+---
+
+### Erros (todos os endpoints)
+Respostas de erro devem usar o status HTTP adequado (`400`, `401`, `403`, `404`, `409`, `500`) e um corpo com a mensagem exibida ao usuário:
+```json
+{
+  "mensagem": "E-mail ou senha incorretos."
+}
+```
+O front-end envia `Authorization: Bearer <access_token>` em todas as rotas autenticadas e encerra a sessão ao receber `401` em `GET /api/auth/me`.
+
+---
+
 ## 2. Produtos & Categorias (`/api/produtos` e `/api/categorias`)
 
 ### 2.1 Listar Categorias

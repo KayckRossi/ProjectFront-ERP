@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { authApi } from "@/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,6 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { toast } from "@/components/ui/use-toast";
 import { safeReturnTo } from "@/lib/safeReturnTo";
-import { appParams } from "@/lib/app-params";
 
 export default function Cadastro() {
   const [email, setEmail] = useState("");
@@ -36,26 +35,18 @@ export default function Cadastro() {
     }
     setLoading(true);
 
-    if (appParams.appId) {
-      try {
-        await base44.auth.register({ email, password });
+    try {
+      const { precisaVerificar } = await authApi.cadastrar(email, password);
+      if (precisaVerificar) {
         setShowOtp(true);
-      } catch (err) {
-        setError(err?.message || "Falha ao criar conta. Tente novamente.");
-      } finally {
-        setLoading(false);
+      } else {
+        // Modo demonstração: conta criada localmente e já conectada
+        window.location.href = safeReturnTo();
       }
-    } else {
-      // Modo Demonstração sem backend: registra localmente e já conecta o usuário
-      const newUser = {
-        id: "user-" + Date.now(),
-        email,
-        full_name: email.split("@")[0],
-        role: "admin",
-      };
-      localStorage.setItem("nexora_demo_user", JSON.stringify(newUser));
+    } catch (err) {
+      setError(err?.message || "Falha ao criar conta. Tente novamente.");
+    } finally {
       setLoading(false);
-      window.location.href = safeReturnTo();
     }
   };
 
@@ -63,10 +54,7 @@ export default function Cadastro() {
     setError("");
     setLoading(true);
     try {
-      const result = await base44.auth.verifyOtp({ email, otpCode });
-      if (result?.access_token) {
-        base44.auth.setToken(result.access_token);
-      }
+      await authApi.verificarOtp(email, otpCode);
       window.location.href = safeReturnTo();
     } catch (err) {
       setError(err?.message || "Código de verificação inválido");
@@ -78,7 +66,7 @@ export default function Cadastro() {
   const handleResend = async () => {
     setError("");
     try {
-      await base44.auth.resendOtp(email);
+      await authApi.reenviarOtp(email);
       toast({
         title: "Código enviado",
         description: "Verifique seu e-mail para o novo código de verificação.",
@@ -89,18 +77,8 @@ export default function Cadastro() {
   };
 
   const handleGoogle = () => {
-    if (appParams.appId) {
-      base44.auth.loginWithProvider("google", safeReturnTo());
-    } else {
-      const demoUser = {
-        id: "google-user-01",
-        email: "novo.usuario@nexora.com",
-        full_name: "Novo Usuário (Google)",
-        role: "admin",
-      };
-      localStorage.setItem("nexora_demo_user", JSON.stringify(demoUser));
-      window.location.href = safeReturnTo();
-    }
+    authApi.loginDemoGoogle();
+    window.location.href = safeReturnTo();
   };
 
   if (showOtp) {
@@ -180,6 +158,8 @@ export default function Cadastro() {
         </p>
       }
     >
+      {/* Login social existe apenas no modo demonstração */}
+      {authApi.modoDemo && (<>
       <Button
         type="button"
         variant="outline"
@@ -198,6 +178,7 @@ export default function Cadastro() {
           <span className="bg-graphite px-3 text-snow/40">ou cadastre-se com e-mail</span>
         </div>
       </div>
+      </>)}
 
       {error && (
         <div className="mb-5 p-3.5 rounded-xl bg-danger/15 border border-danger/30 text-snow flex items-start gap-2.5 text-sm animate-fade-in">
