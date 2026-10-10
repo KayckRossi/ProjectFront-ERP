@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const TOAST_LIMIT = 20;
+const TOAST_LIMIT = 3;
 const TOAST_REMOVE_DELAY = 1000000;
 
 const actionTypes = {

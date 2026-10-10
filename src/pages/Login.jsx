@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
-import { appParams } from "@/lib/app-params";
+import { authApi } from "@/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,51 +30,20 @@ export default function Login() {
     setLoading(true);
 
     try {
-      if (appParams.appId) {
-        await base44.auth.loginViaEmailPassword(email, password);
-      } else {
-        // Modo Desenvolvimento / Demonstração (Permite testar o front-end sem backend ativo)
-        const demoUser = {
-          id: "admin-01",
-          email: email || "admin@nexora.com",
-          full_name: email === "admin@nexora.com" ? "Administrador Nexora" : (email.split("@")[0] || "Usuário"),
-          role: "admin",
-        };
-        localStorage.setItem("nexora_demo_user", JSON.stringify(demoUser));
-      }
+      await authApi.login(email, password);
       window.location.href = returnTo;
     } catch (err) {
-      // Fallback para modo demo caso haja falha de rede/backend não configurado
-      if (!appParams.appId || err?.status === 404 || err?.message?.includes("fetch") || err?.message?.includes("Network")) {
-        const demoUser = {
-          id: "admin-01",
-          email: email || "admin@nexora.com",
-          full_name: "Administrador Nexora",
-          role: "admin",
-        };
-        localStorage.setItem("nexora_demo_user", JSON.stringify(demoUser));
-        window.location.href = returnTo;
-        return;
-      }
-      setError(err?.message || "E-mail ou senha incorretos. Por favor, verifique seus dados de acesso.");
+      setError(err?.status === 401
+        ? "E-mail ou senha incorretos. Por favor, verifique seus dados de acesso."
+        : err?.message || "Não foi possível entrar. Tente novamente.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogle = () => {
-    if (appParams.appId) {
-      base44.auth.loginWithProvider("google", returnTo);
-    } else {
-      const demoUser = {
-        id: "google-admin-01",
-        email: "admin.google@nexora.com",
-        full_name: "Kayck Rossi (Google)",
-        role: "admin",
-      };
-      localStorage.setItem("nexora_demo_user", JSON.stringify(demoUser));
-      window.location.href = returnTo;
-    }
+    authApi.loginDemoGoogle();
+    window.location.href = returnTo;
   };
 
   return (
@@ -95,7 +63,8 @@ export default function Login() {
         </p>
       }
     >
-      {/* Caixa de Credenciais de Teste / Demonstração */}
+      {/* Credenciais de teste e login social existem apenas no modo demonstração */}
+      {authApi.modoDemo && (<>
       <div className="mb-5 p-3.5 rounded-xl bg-onyx/90 border border-pearl/25 text-xs">
         <div className="flex items-center justify-between mb-2">
           <span className="font-semibold text-pearl flex items-center gap-1.5">
@@ -136,6 +105,7 @@ export default function Login() {
           <span className="bg-graphite px-3 text-snow/40">ou entre com seu e-mail</span>
         </div>
       </div>
+      </>)}
 
       {/* Alerta de erro */}
       {error && (

@@ -12,7 +12,7 @@ export default function Header({ onMenuClick }) {
   const { isDark, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const name = user?.full_name || user?.email || 'Usuário';
+  const name = user?.nome || user?.full_name || user?.email || 'Usuário';
   const initial = (name || 'U')[0].toUpperCase();
 
   return (

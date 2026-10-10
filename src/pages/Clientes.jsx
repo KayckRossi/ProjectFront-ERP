@@ -3,15 +3,35 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Pencil, Trash2, X, Phone, Mail, IdCard } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import EmptyState from '@/components/EmptyState';
-import { clientes as clientesIniciais } from '@/lib/mockData';
+import { useErpData } from '@/lib/ErpDataContext';
 import { formatCurrency, initials } from '@/lib/format';
 
+const somenteDigitos = (v) => v.replace(/\D/g, '');
+
+// Formata CPF (11 dígitos) ou CNPJ (14 dígitos) conforme o usuário digita
+function mascaraDocumento(valor) {
+  const d = somenteDigitos(valor).slice(0, 14);
+  if (d.length <= 11) {
+    return d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  }
+  return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2');
+}
+
+function mascaraTelefone(valor) {
+  const d = somenteDigitos(valor).slice(0, 11);
+  if (d.length <= 10) return d.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2');
+  return d.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2');
+}
+
+const MASCARAS = { documento: mascaraDocumento, telefone: mascaraTelefone };
+
 function ModalFormularioCliente({ open, onClose, onSave, editing }) {
+  const [erro, setErro] = useState('');
   const [form, setForm] = useState(
     editing ? {
-      nome: editing.nome || editing.name || '',
-      documento: editing.documento || editing.doc || '',
-      telefone: editing.telefone || editing.phone || '',
+      nome: editing.nome || '',
+      documento: editing.documento || '',
+      telefone: editing.telefone || '',
       email: editing.email || '',
     } : {
       nome: '',
@@ -25,12 +45,11 @@ function ModalFormularioCliente({ open, onClose, onSave, editing }) {
 
   const submit = (e) => {
     e.preventDefault();
-    onSave({
-      ...form,
-      name: form.nome,
-      doc: form.documento,
-      phone: form.telefone,
-    });
+    const digitosDoc = somenteDigitos(form.documento).length;
+    if (!form.nome.trim()) return setErro('Informe o nome ou razão social.');
+    if (digitosDoc && digitosDoc !== 11 && digitosDoc !== 14) return setErro('CPF deve ter 11 dígitos e CNPJ 14.');
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setErro('E-mail inválido.');
+    onSave({ ...form, nome: form.nome.trim(), email: form.email.trim() });
   };
 
   const campo = (label, name, type = 'text', Icon = null) => (
@@ -41,7 +60,11 @@ function ModalFormularioCliente({ open, onClose, onSave, editing }) {
         <input
           type={type}
           value={form[name]}
-          onChange={(e) => setForm({ ...form, [name]: e.target.value })}
+          onChange={(e) => {
+            setErro('');
+            const mascara = MASCARAS[name];
+            setForm({ ...form, [name]: mascara ? mascara(e.target.value) : e.target.value });
+          }}
           className={`w-full h-10 bg-onyx text-snow rounded-lg ${Icon ? 'pl-10' : 'pl-3'} pr-3 border border-transparent focus:border-verdigris focus:outline-none text-sm`}
         />
       </div>
@@ -61,6 +84,7 @@ function ModalFormularioCliente({ open, onClose, onSave, editing }) {
           {campo('CPF / CNPJ', 'documento', 'text', IdCard)}
           {campo('Telefone', 'telefone', 'text', Phone)}
           {campo('E-mail', 'email', 'email', Mail)}
+          {erro && <p role="alert" className="text-sm text-danger">{erro}</p>}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 h-11 rounded-lg border border-snow/15 text-snow/70 hover:bg-graphite-hover transition-colors text-sm font-medium">Cancelar</button>
             <button type="submit" className="flex-1 h-11 rounded-lg bg-verdigris text-snow hover:bg-verdigris-hover transition-colors text-sm font-semibold">Salvar</button>
@@ -72,29 +96,29 @@ function ModalFormularioCliente({ open, onClose, onSave, editing }) {
 }
 
 export default function Clientes() {
-  const [itens, setItens] = useState(clientesIniciais);
+  const { clientes: itens, salvarCliente, excluirCliente } = useErpData();
   const [busca, setBusca] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
   const [editando, setEditando] = useState(null);
   const [confirmarExclusao, setConfirmarExclusao] = useState(null);
 
-  const filtrados = useMemo(() => itens.filter(c => {
-    const nome = c.nome || c.name || '';
-    const doc = c.documento || c.doc || '';
-    return nome.toLowerCase().includes(busca.toLowerCase()) || doc.includes(busca);
-  }), [itens, busca]);
+  const filtrados = useMemo(() => {
+    const termo = busca.toLowerCase();
+    const termoDigitos = somenteDigitos(busca);
+    return itens.filter(c =>
+      (c.nome || '').toLowerCase().includes(termo) ||
+      (c.email || '').toLowerCase().includes(termo) ||
+      (termoDigitos && somenteDigitos(c.documento || '').includes(termoDigitos))
+    );
+  }, [itens, busca]);
 
   const salvar = (form) => {
-    if (editando) {
-      setItens(prev => prev.map(c => c.id === editando.id ? { ...c, ...form } : c));
-    } else {
-      setItens(prev => [...prev, { ...form, id: `c${Date.now()}`, totalCompras: 0, totalPurchases: 0 }]);
-    }
+    salvarCliente(editando ? { ...form, id: editando.id } : form);
     setModalAberto(false);
   };
 
   const excluir = (id) => {
-    setItens(prev => prev.filter(c => c.id !== id));
+    excluirCliente(id);
     setConfirmarExclusao(null);
   };
 
@@ -111,7 +135,8 @@ export default function Clientes() {
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por nome ou documento..."
+          placeholder="Buscar por nome, e-mail ou documento..."
+          aria-label="Buscar clientes"
           className="w-full h-10 bg-graphite text-snow placeholder:text-snow/40 rounded-lg pl-10 pr-4 border border-transparent focus:border-verdigris focus:outline-none text-sm"
         />
       </div>
@@ -122,10 +147,7 @@ export default function Clientes() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           <AnimatePresence>
             {filtrados.map(c => {
-              const nome = c.nome || c.name;
-              const doc = c.documento || c.doc;
-              const tel = c.telefone || c.phone;
-              const totalCompras = c.totalCompras ?? c.totalPurchases ?? 0;
+              const { nome, documento: doc, telefone: tel, totalCompras = 0 } = c;
 
               return (
                 <motion.div
@@ -145,10 +167,10 @@ export default function Clientes() {
                       <p className="text-xs text-snow/50 font-mono">{doc}</p>
                     </div>
                     <div className="flex gap-1">
-                      <button onClick={() => { setEditando(c); setModalAberto(true); }} className="w-8 h-8 rounded-md hover:bg-verdigris-light text-snow/60 hover:text-pearl flex items-center justify-center transition-colors" aria-label="Editar">
+                      <button onClick={() => { setEditando(c); setModalAberto(true); }} className="w-8 h-8 rounded-md hover:bg-verdigris-light text-snow/60 hover:text-pearl flex items-center justify-center transition-colors" aria-label={`Editar ${nome}`}>
                         <Pencil size={15} />
                       </button>
-                      <button onClick={() => setConfirmarExclusao(c)} className="w-8 h-8 rounded-md hover:bg-danger/15 text-snow/60 hover:text-danger flex items-center justify-center transition-colors" aria-label="Excluir">
+                      <button onClick={() => setConfirmarExclusao(c)} className="w-8 h-8 rounded-md hover:bg-danger/15 text-snow/60 hover:text-danger flex items-center justify-center transition-colors" aria-label={`Excluir ${nome}`}>
                         <Trash2 size={15} />
                       </button>
                     </div>
@@ -168,7 +190,7 @@ export default function Clientes() {
         </div>
       )}
 
-      <ModalFormularioCliente open={modalAberto} onClose={() => setModalAberto(false)} onSave={salvar} editing={editando} />
+      <ModalFormularioCliente key={modalAberto ? (editando?.id ?? 'novo') : 'fechado'} open={modalAberto} onClose={() => setModalAberto(false)} onSave={salvar} editing={editando} />
 
       <AnimatePresence>
         {confirmarExclusao && (

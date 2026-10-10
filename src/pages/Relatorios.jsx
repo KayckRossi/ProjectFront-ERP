@@ -1,10 +1,19 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { Calendar, Download, TrendingUp, Award, Users } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { vendasPorDia, produtosMaisVendidos, melhoresClientes, vendasPorCategoria } from '@/lib/mockData';
 import { formatCurrency } from '@/lib/format';
+import { useCoresGrafico } from '@/lib/useCoresGrafico';
+import { exportarCsv } from '@/lib/exportarCsv';
+
+// O mock traz o dia como "dd/mm"; converte para "aaaa-mm-dd" para comparar com o período
+const ANO_DADOS = 2026;
+const diaParaISO = (dia) => {
+  const [d, m] = dia.split('/');
+  return `${ANO_DADOS}-${m}-${d}`;
+};
 
 const CORES_PIE = ['#339989', '#7DE2D1', '#2A7A6E', '#5CBBB0', '#9AE8DB'];
 
@@ -21,20 +30,40 @@ function TooltipGrafico({ active, payload, label, formatter }) {
 export default function Relatorios() {
   const [dataInicio, setDataInicio] = useState('2026-09-01');
   const [dataFim, setDataFim] = useState('2026-09-29');
+  const cores = useCoresGrafico();
+  const periodoInvalido = dataInicio && dataFim && dataInicio > dataFim;
+
+  const vendasNoPeriodo = useMemo(() => vendasPorDia.filter(v => {
+    const data = diaParaISO(v.dia);
+    return (!dataInicio || data >= dataInicio) && (!dataFim || data <= dataFim);
+  }), [dataInicio, dataFim]);
+
+  const totalPeriodo = vendasNoPeriodo.reduce((s, v) => s + v.vendas, 0);
+
+  const exportar = () => exportarCsv(
+    `vendas-${dataInicio}-a-${dataFim}.csv`,
+    [{ titulo: 'Dia', campo: 'dia' }, { titulo: 'Faturamento (R$)', campo: 'vendas' }],
+    vendasNoPeriodo,
+  );
 
   return (
     <div>
       <PageHeader title="Relatórios" subtitle="Análise de desempenho e exportações">
-        <button className="h-10 px-4 rounded-lg bg-verdigris text-snow text-sm font-semibold hover:bg-verdigris-hover transition-colors flex items-center gap-2">
-          <Download size={18} /> Exportar
+        <button
+          onClick={exportar}
+          disabled={periodoInvalido || vendasNoPeriodo.length === 0}
+          className="h-10 px-4 rounded-lg bg-verdigris text-snow text-sm font-semibold hover:bg-verdigris-hover transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Download size={18} /> Exportar CSV
         </button>
       </PageHeader>
 
       {/* Filtro de Período */}
       <div className="bg-graphite rounded-card p-4 card-shadow mb-6 flex flex-col sm:flex-row sm:items-end gap-4">
         <div>
-          <label className="text-xs text-snow/60 mb-1.5 block flex items-center gap-1.5"><Calendar size={13} /> Data inicial</label>
+          <label htmlFor="rel-inicio" className="text-xs text-snow/60 mb-1.5 flex items-center gap-1.5"><Calendar size={13} /> Data inicial</label>
           <input
+            id="rel-inicio"
             type="date"
             value={dataInicio}
             onChange={(e) => setDataInicio(e.target.value)}
@@ -42,13 +71,24 @@ export default function Relatorios() {
           />
         </div>
         <div>
-          <label className="text-xs text-snow/60 mb-1.5 block flex items-center gap-1.5"><Calendar size={13} /> Data final</label>
+          <label htmlFor="rel-fim" className="text-xs text-snow/60 mb-1.5 flex items-center gap-1.5"><Calendar size={13} /> Data final</label>
           <input
+            id="rel-fim"
             type="date"
             value={dataFim}
             onChange={(e) => setDataFim(e.target.value)}
             className="h-10 bg-onyx text-snow rounded-lg px-3 border border-transparent focus:border-verdigris focus:outline-none text-sm"
           />
+        </div>
+        <div className="sm:ml-auto sm:text-right">
+          {periodoInvalido ? (
+            <p role="alert" className="text-sm text-danger">A data inicial deve ser anterior à final.</p>
+          ) : (
+            <>
+              <p className="text-xs text-snow/50">Faturamento no período</p>
+              <p className="text-xl font-semibold text-pearl">{formatCurrency(totalPeriodo)}</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -58,11 +98,11 @@ export default function Relatorios() {
           <p className="text-xs text-snow/50 mb-4">Faturamento diário</p>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={vendasPorDia} margin={{ left: -10, right: 10, top: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(125,226,209,0.08)" vertical={false} />
-                <XAxis dataKey="dia" stroke="#FFFAFB66" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="#FFFAFB66" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}`} />
-                <Tooltip content={<TooltipGrafico formatter={formatCurrency} />} cursor={{ fill: 'rgba(125,226,209,0.05)' }} />
+              <BarChart data={periodoInvalido ? [] : vendasNoPeriodo} margin={{ left: -10, right: 10, top: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={cores.grade} vertical={false} />
+                <XAxis dataKey="dia" stroke={cores.eixo} fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke={cores.eixo} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}`} />
+                <Tooltip content={<TooltipGrafico formatter={formatCurrency} />} cursor={{ fill: cores.cursor }} />
                 <Bar dataKey="vendas" fill="#339989" radius={[4, 4, 0, 0]} maxBarSize={28} />
               </BarChart>
             </ResponsiveContainer>
@@ -76,7 +116,7 @@ export default function Relatorios() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={vendasPorCategoria} dataKey="valor" nameKey="nome" cx="50%" cy="50%" outerRadius={90} paddingAngle={3}>
-                  {vendasPorCategoria.map((_, i) => <Cell key={i} fill={CORES_PIE[i % CORES_PIE.length]} stroke="#2B2C28" strokeWidth={2} />)}
+                  {vendasPorCategoria.map((_, i) => <Cell key={i} fill={CORES_PIE[i % CORES_PIE.length]} stroke={cores.bordaFatia} strokeWidth={2} />)}
                 </Pie>
                 <Tooltip content={<TooltipGrafico formatter={formatCurrency} />} />
               </PieChart>

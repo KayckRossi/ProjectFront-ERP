@@ -1,6 +1,7 @@
 export {
   formatCurrency,
   formatNumber,
+  parseDate,
   formatDate,
   formatDateTime,
   initials,
