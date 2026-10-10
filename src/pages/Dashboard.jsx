@@ -7,8 +7,10 @@ import { DollarSign, ShoppingCart, AlertTriangle, TrendingUp } from 'lucide-reac
 import KpiCard from '@/components/KpiCard';
 import StatusBadge from '@/components/StatusBadge';
 import PageHeader from '@/components/PageHeader';
-import { useTheme } from '@/lib/ThemeContext';
-import { vendasRecentes, vendasPorDia, vendasPorCategoria } from '@/lib/mockData';
+import { useCoresGrafico } from '@/lib/useCoresGrafico';
+import { useErpData } from '@/lib/ErpDataContext';
+import { estoqueBaixo } from '@/lib/estoque';
+import { vendasPorDia, vendasPorCategoria } from '@/lib/mockData';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 
 const CORES_PIE = ['#339989', '#7DE2D1', '#2A7A6E', '#5CBBB0', '#9AE8DB'];
@@ -26,11 +28,10 @@ function ChartTooltip({ active, payload, label, formatter }) {
 }
 
 export default function Dashboard() {
-  const { isDark } = useTheme();
-  const axisColor = isDark ? 'rgba(255, 250, 251, 0.45)' : 'rgba(15, 23, 42, 0.60)';
-  const gridColor = isDark ? 'rgba(125, 226, 209, 0.08)' : 'rgba(15, 23, 42, 0.08)';
-  const cellStroke = isDark ? '#2B2C28' : '#FFFFFF';
-  const legendColor = isDark ? '#FFFAFB99' : '#0F172ACC';
+  const { eixo: axisColor, grade: gridColor, bordaFatia: cellStroke, legenda: legendColor } = useCoresGrafico();
+  const { produtos, vendas } = useErpData();
+  const produtosEmBaixa = produtos.filter(p => estoqueBaixo(p) || (p.estoque ?? 0) === 0).length;
+  const vendasRecentes = vendas.slice(0, 6);
 
   return (
     <div>
@@ -40,7 +41,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <KpiCard icon={DollarSign} label="Vendas Hoje" value={1870} prefix="R$ " />
         <KpiCard icon={ShoppingCart} label="Ticket Médio" value={62.30} prefix="R$ " />
-        <KpiCard icon={AlertTriangle} label="Produtos em Baixa" value={4} />
+        <KpiCard icon={AlertTriangle} label="Produtos em Baixa" value={produtosEmBaixa} />
         <KpiCard icon={TrendingUp} label="Faturamento Mensal" value={18300} prefix="R$ " />
       </div>
 

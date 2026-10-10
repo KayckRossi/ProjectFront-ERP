@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Store, Printer, Bell, Shield } from 'lucide-react';
+import { Store, Printer, Bell, Shield, Database } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
+import { useToast } from '@/components/ui/use-toast';
+import { useErpData } from '@/lib/ErpDataContext';
 
 function Alternador({ ativo, aoAlternar }) {
   return (
@@ -56,6 +58,14 @@ export default function Configuracoes() {
   const [estoqueBaixo, setEstoqueBaixo] = useState(true);
   const [impressora, setImpressora] = useState(false);
   const [doisFatores, setDoisFatores] = useState(false);
+  const { toast } = useToast();
+  const { restaurarDadosDemo } = useErpData();
+
+  const restaurar = () => {
+    if (!window.confirm('Restaurar os dados de demonstração? Vendas, produtos e clientes cadastrados neste navegador serão perdidos.')) return;
+    restaurarDadosDemo();
+    toast({ title: 'Dados de demonstração restaurados' });
+  };
 
   return (
     <div>
@@ -102,6 +112,12 @@ export default function Configuracoes() {
           </LinhaConfiguracao>
           <LinhaConfiguracao label="Sessão">
             <button className="text-sm text-pearl hover:underline">Encerrar outras sessões</button>
+          </LinhaConfiguracao>
+        </CartaoConfiguracao>
+
+        <CartaoConfiguracao icon={Database} title="Dados" desc="Os dados da demonstração ficam salvos neste navegador">
+          <LinhaConfiguracao label="Restaurar dados de demonstração">
+            <button onClick={restaurar} className="text-sm text-danger hover:underline">Restaurar</button>
           </LinhaConfiguracao>
         </CartaoConfiguracao>
       </div>

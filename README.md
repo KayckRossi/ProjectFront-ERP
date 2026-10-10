@@ -26,8 +26,9 @@ A interface utiliza um esquema de cores moderno de alto contraste para máxima l
 ### 1. 🛒 Ponto de Venda (PDV / POS)
 - **Frente de Caixa Rápida**: Busca instantânea de produtos por nome ou leitor de código de barras.
 - **Filtro por Categorias**: Seleção dinâmica de categorias (Bebidas, Alimentos, Limpeza, etc.).
-- **Carrinho Dinâmico**: Gestão de quantidades, descontos e cancelamento de itens.
-- **Checkout Multimeios**: Pagamento via PIX, Cartão e Dinheiro (com cálculo automático de troco).
+- **Carrinho Dinâmico**: Gestão de quantidades (limitadas ao estoque disponível), desconto percentual, cliente da venda e cancelamento.
+- **Checkout Multimeios**: Pagamento via PIX, Cartão e Dinheiro (com cálculo automático de troco e bloqueio de valor insuficiente).
+- **Venda integrada**: ao finalizar, baixa o estoque, cria o pedido no Kanban, lança a entrada no Financeiro e soma ao histórico do cliente.
 - **Kanban de Pedidos Integrado**: Alternância com 1 clique para visão de pedidos em preparação.
 
 ### 2. 📋 Kanban de Pedidos
@@ -43,18 +44,24 @@ A interface utiliza um esquema de cores moderno de alto contraste para máxima l
 ### 4. 📦 Produtos & Controle de Estoque
 - Listagem com precificação, margem, custo e estoque disponível.
 - Alertas visuais para produtos em nível crítico ou esgotados.
-- Modal de cadastro e edição rápida de produtos.
+- Modal de cadastro e edição rápida de produtos, com validação de preço/custo.
+- Movimentação de estoque (entrada e saída/perda) e busca por nome ou SKU.
 
 ### 5. 👥 Gestão de Clientes
-- Cadastro completo de clientes PF e PJ (Nome, CPF/CNPJ, Telefone, E-mail).
+- Cadastro completo de clientes PF e PJ (Nome, CPF/CNPJ, Telefone, E-mail), com máscaras e validação.
 - Histórico acumulado de compras e ticket individual por cliente.
 
 ### 6. 💰 Gestão Financeira
 - Fluxo de caixa com discriminação de entradas (PDV) e saídas (fornecedores, custos fixos).
 - Balanço mensal comparativo entre receitas e despesas.
+- Lançamento manual de movimentações e exportação em CSV.
 
 ### 7. 📈 Relatórios & Análises
-- Relatórios consolidados de vendas por período, curva ABC de produtos e clientes mais recorrentes.
+- Relatórios consolidados de vendas por período (com filtro de datas), produtos mais vendidos e clientes mais recorrentes.
+- Exportação do período em CSV (compatível com Excel).
+
+### 💾 Dados da demonstração
+Enquanto o backend não está conectado, produtos, clientes, vendas, pedidos e movimentações ficam em um estado compartilhado (`src/lib/ErpDataContext.jsx`) salvo no `localStorage`. Para voltar aos dados iniciais, use **Configurações → Dados → Restaurar**.
 
 ---
 
@@ -119,9 +126,8 @@ http://localhost:5173
 │   ├── components/     # Componentes estruturais (Sidebar, Header, Layout, OrderKanban)
 │   │   └── ui/         # Componentes primitivos (Radix UI / Shadcn)
 │   ├── hooks/          # Hooks customizados (useIsMobile, useSize)
-│   ├── lib/            # Helpers de autenticação, formatação e mockData
-│   ├── pages/          # Telas completas (Dashboard, POS, Estoque, etc.)
-│   ├── utils/          # Funções utilitárias
+│   ├── lib/            # Contextos (auth, tema, dados do ERP), formatação, CSV e mockData
+│   ├── pages/          # Telas completas (Dashboard, PDV, Estoque, etc.)
 │   ├── App.jsx         # Roteamento central e provedores
 │   ├── index.css       # Estilos globais e tokens Tailwind
 │   └── main.jsx        # Ponto de entrada React

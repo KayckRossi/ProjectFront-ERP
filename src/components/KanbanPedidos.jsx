@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { motion } from 'framer-motion';
 import { Clock, ChefHat, CheckCircle2, Package } from 'lucide-react';
-import { pedidos as pedidosIniciais } from '@/lib/mockData';
+import { useErpData } from '@/lib/ErpDataContext';
 import { formatCurrency, formatDateTime, initials } from '@/lib/format';
 
 const COLUNAS = [
@@ -12,19 +11,19 @@ const COLUNAS = [
 ];
 
 export default function KanbanPedidos() {
-  const [pedidos, setPedidos] = useState(pedidosIniciais || []);
+  const { pedidos, moverPedido } = useErpData();
 
   const onDragEnd = (result) => {
     const { destination, source, draggableId } = result;
     if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) return;
-    setPedidos(prev => prev.map(o => o.id === draggableId ? { ...o, status: destination.droppableId } : o));
+    moverPedido(draggableId, destination.droppableId);
   };
 
   const mover = (id, dir) => {
     const pedido = COLUNAS.findIndex(c => c.id === pedidos.find(o => o.id === id)?.status);
     const next = pedido + dir;
     if (next < 0 || next >= COLUNAS.length) return;
-    setPedidos(prev => prev.map(o => o.id === id ? { ...o, status: COLUNAS[next].id } : o));
+    moverPedido(id, COLUNAS[next].id);
   };
 
   return (
@@ -91,6 +90,7 @@ export default function KanbanPedidos() {
                               <div className="flex items-center gap-2 mt-3">
                                 <button
                                   onClick={() => mover(o.id, -1)}
+                                  aria-label={`Voltar pedido ${o.id} para a etapa anterior`}
                                   disabled={colIdx === 0}
                                   className="flex-1 h-8 rounded-md bg-graphite-hover text-snow/70 text-xs font-medium hover:bg-verdigris hover:text-snow transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
@@ -98,6 +98,7 @@ export default function KanbanPedidos() {
                                 </button>
                                 <button
                                   onClick={() => mover(o.id, 1)}
+                                  aria-label={`Avançar pedido ${o.id} para a próxima etapa`}
                                   disabled={colIdx === COLUNAS.length - 1}
                                   className="flex-1 h-8 rounded-md bg-graphite-hover text-snow/70 text-xs font-medium hover:bg-verdigris hover:text-snow transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
