@@ -4,6 +4,7 @@ import { arredondar, calcularTotais, lerValorMonetario } from './dinheiro.js';
 import { mascaraCnpj, mascaraDocumento, mascaraTelefone } from './mascaras.js';
 import { contemTexto, normalizarTexto, somenteDigitos } from './texto.js';
 import { parseDate } from './utils.js';
+import { PERMISSOES, pode } from './permissoes.js';
 
 // Simula a digitação caractere por caractere, como acontece no formulário
 const digitar = (mascara, texto) => [...texto].reduce((atual, caractere) => mascara(atual + caractere), '');
@@ -73,5 +74,22 @@ describe('máscaras e texto', () => {
     expect(normalizarTexto('  Café TORRADO ')).toBe('cafe torrado');
     expect(contemTexto('Feijão Carioca', 'feijao')).toBe(true);
     expect(somenteDigitos('123.456.789-00')).toBe('12345678900');
+  });
+});
+
+describe('permissões', () => {
+  it('administrador pode tudo e operador só o necessário para vender', () => {
+    expect(Object.keys(PERMISSOES).every((permissao) => pode('admin', permissao))).toBe(true);
+    expect(pode('operador', 'pdv.operar')).toBe(true);
+    expect(pode('operador', 'clientes.gerenciar')).toBe(true);
+    expect(pode('operador', 'vendas.cancelar')).toBe(false);
+    expect(pode('operador', 'financeiro.ver')).toBe(false);
+    expect(pode('gerente', 'compras.gerenciar')).toBe(true);
+    expect(pode('gerente', 'usuarios.gerenciar')).toBe(false);
+  });
+
+  it('perfil ou permissão desconhecidos não têm acesso', () => {
+    expect(pode(undefined, 'pdv.operar')).toBe(false);
+    expect(pode('admin', 'permissao.inexistente')).toBe(false);
   });
 });

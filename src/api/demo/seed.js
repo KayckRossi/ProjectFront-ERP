@@ -1,14 +1,19 @@
-// Gera o banco do modo demonstração: cadastro base + histórico de ~6 meses relativo à data atual.
-// O histórico é criado pelas mesmas regras do domínio (registrarVenda, cancelarVenda, criarTransacao),
-// então estoque, financeiro, pedidos e total de compras dos clientes ficam consistentes entre si.
-import { cancelarVenda, criarTransacao, registrarVenda } from './dominio.js';
-import { calcularTotais } from '../../lib/dinheiro.js';
+// Gera o banco do modo demonstração: cadastros + histórico de ~6 meses relativo à data atual.
+// O histórico passa pelas mesmas regras do domínio (vendas, caixa, compras, financeiro, auditoria),
+// então estoque, financeiro, caixas e totais dos clientes ficam consistentes entre si.
+import {
+  abrirCaixa, cancelarCompra, cancelarVenda, criarCompra, criarTransacao, fecharCaixa,
+  movimentarCaixa, receberCompra, registrarEvento, registrarVenda, resumoSessao,
+} from './dominio/index.js';
+import { CREDENCIAIS_DEMO } from './credenciais.js';
+import { arredondar, calcularTotais } from '../../lib/dinheiro.js';
 import { dataLocalISO } from '../../lib/datas.js';
 
-export const VERSAO_BANCO = 2;
+export const VERSAO_BANCO = 3;
 
 const SEMENTE = 20261010;
 const MESES_DE_HISTORICO = 6;
+const DIAS_DE_AUDITORIA = 7;
 
 const CATEGORIAS = [
   { id: 'bebidas', nome: 'Bebidas', cor: '#339989' },
@@ -50,6 +55,37 @@ const CLIENTES = [
   { id: 'c8', nome: 'Rafael Mendes', documento: '789.123.456-77', telefone: '(51) 98765-1234', email: 'rafael.m@email.com', perfil: 'pf' },
 ];
 
+const USUARIOS = [
+  { id: 'u1', nome: 'Administrador Nexora', email: 'admin@nexora.com', role: 'admin', ativo: true },
+  { id: 'u2', nome: 'Patrícia Lima', email: 'gerente@nexora.com', role: 'gerente', ativo: true },
+  { id: 'u3', nome: 'Lucas Ferreira', email: 'operador@nexora.com', role: 'operador', ativo: true },
+  { id: 'u4', nome: 'Bruna Alves', email: 'bruna@nexora.com', role: 'operador', ativo: false },
+];
+
+// `produtos` e `peso` só orientam a geração das compras
+const FORNECEDORES = [
+  {
+    id: 'f1', razaoSocial: 'Atacadão Central Distribuidora LTDA', nomeFantasia: 'Atacadão Central', cnpj: '11.222.333/0001-81',
+    contato: 'Roberto Nunes', telefone: '(11) 4002-8922', email: 'vendas@atacadaocentral.com.br', prazoPagamentoDias: 28,
+    observacoes: 'Entrega às segundas e quintas.', produtos: ['p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'p10', 'p13', 'p15', 'p16'], peso: 50,
+  },
+  {
+    id: 'f2', razaoSocial: 'Distribuidora Bom Preço Bebidas LTDA', nomeFantasia: 'Distribuidora Bom Preço', cnpj: '22.333.444/0001-90',
+    contato: 'Camila Rocha', telefone: '(11) 3555-1200', email: 'pedidos@bompreco.com.br', prazoPagamentoDias: 30,
+    observacoes: '', produtos: ['p1', 'p2', 'p3'], peso: 25,
+  },
+  {
+    id: 'f3', razaoSocial: 'Laticínios Serra Azul S.A.', nomeFantasia: 'Laticínios Serra Azul', cnpj: '33.444.555/0001-02',
+    contato: 'Eduardo Prado', telefone: '(35) 3333-7788', email: 'comercial@serraazul.com.br', prazoPagamentoDias: 14,
+    observacoes: 'Pedido mínimo de 24 unidades.', produtos: ['p14'], peso: 15,
+  },
+  {
+    id: 'f4', razaoSocial: 'Panificadora Trigo Fino ME', nomeFantasia: 'Panificadora Trigo Fino', cnpj: '44.555.666/0001-13',
+    contato: 'Antônio Faria', telefone: '(11) 2777-3030', email: 'trigofino@email.com', prazoPagamentoDias: 7,
+    observacoes: 'Entrega diária pela manhã.', produtos: ['p11', 'p12'], peso: 10,
+  },
+];
+
 export const CONFIGURACOES_PADRAO = {
   loja: {
     nome: 'Nexora Market',
@@ -59,15 +95,18 @@ export const CONFIGURACOES_PADRAO = {
   },
   notificacoes: { push: true, alertaEstoqueBaixo: true },
   impressao: { automatica: false, modelo: 'Térmica 80mm', mensagemRodape: 'Obrigado pela preferência! Volte sempre.' },
+  pdv: { exigirCaixaAberto: true },
   seguranca: { doisFatores: false },
 };
 
 // Vendas por dia da semana (domingo a sábado) antes da variação aleatória
 const VENDAS_POR_DIA_DA_SEMANA = [6, 9, 9, 10, 11, 13, 15];
-const FORNECEDORES = ['Atacadão Central', 'Distribuidora Bom Preço', 'Laticínios Serra Azul', 'Panificadora Trigo Fino'];
+const FUNDO_DE_TROCO = 150;
 const MOTIVOS_CANCELAMENTO = ['Cliente desistiu da compra', 'Produto com defeito', 'Erro no registro da venda'];
 
 const clonar = (valor) => JSON.parse(JSON.stringify(valor));
+const momento = (dia, horas, minutos = 0, segundos = 0) => new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), horas, minutos, segundos);
+const senhaDe = (email) => CREDENCIAIS_DEMO.find((c) => c.email === email)?.senha ?? 'nexora123';
 
 // Gerador pseudoaleatório determinístico (mulberry32): mesma data = mesmo histórico
 function criarAleatorio(semente) {
@@ -86,12 +125,15 @@ function criarAleatorio(semente) {
     let sorteio = proximo() * total;
     return lista.find((item) => (sorteio -= peso(item)) < 0) ?? lista[lista.length - 1];
   };
-  return { proximo, inteiro, decimal, ponderado };
+  const sortearVarios = (lista, quantidade) => {
+    const restantes = [...lista];
+    return Array.from({ length: Math.min(quantidade, restantes.length) }, () => restantes.splice(inteiro(0, restantes.length - 1), 1)[0]);
+  };
+  return { proximo, inteiro, decimal, ponderado, sortearVarios };
 }
 
 function montarVenda(aleatorio) {
-  const temCliente = aleatorio.proximo() < 0.35;
-  const cliente = temCliente ? aleatorio.ponderado(CLIENTES, () => 1) : null;
+  const cliente = aleatorio.proximo() < 0.35 ? aleatorio.ponderado(CLIENTES, () => 1) : null;
   const atacado = cliente?.perfil === 'pj';
 
   const quantidadeDeProdutos = atacado ? aleatorio.inteiro(3, 5) : aleatorio.ponderado([1, 2, 3, 4], (n) => [35, 35, 20, 10][n - 1]);
@@ -125,7 +167,7 @@ function montarVenda(aleatorio) {
   };
 }
 
-function lancarDespesasDoDia(db, dia, aleatorio, crescimento) {
+function lancarDespesasDoDia(db, dia, aleatorio) {
   const data = dataLocalISO(dia);
   const lancar = (descricao, tipo, categoria, valor) => criarTransacao(db, { descricao, tipo, categoria, valor, data });
   const diaDoMes = dia.getDate();
@@ -147,15 +189,23 @@ function lancarDespesasDoDia(db, dia, aleatorio, crescimento) {
     if (faturamento > 0) lancar('Simples Nacional (DAS)', 'saida', 'Impostos', Math.round(faturamento * 6) / 100);
   }
   if (diaDoMes === 25) lancar('Comissão de recargas e serviços', 'entrada', 'Serviços', aleatorio.decimal(120, 220));
-  // Compras de mercadoria às segundas e quintas
-  if (dia.getDay() === 1 || dia.getDay() === 4) {
-    const fornecedor = aleatorio.ponderado(FORNECEDORES, () => 1);
-    lancar(`Compra de mercadorias - ${fornecedor}`, 'saida', 'Fornecedores', Math.round(aleatorio.decimal(350, 650) * crescimento * 100) / 100);
-  }
+}
+
+// Compra de reposição de um fornecedor com valor próximo de `valorAlvo` (caixas de 6 unidades)
+function montarCompra(aleatorio, valorAlvo) {
+  const fornecedor = aleatorio.ponderado(FORNECEDORES, (f) => f.peso);
+  const produtos = aleatorio.sortearVarios(PRODUTOS.filter((p) => fornecedor.produtos.includes(p.id)), aleatorio.inteiro(2, 5));
+  const itens = produtos.map((p) => ({
+    produtoId: p.id,
+    quantidade: Math.max(6, Math.round(valorAlvo / produtos.length / p.custo / 6) * 6),
+    custoUnitario: p.custo,
+  }));
+  return { fornecedorId: fornecedor.id, itens, observacoes: '' };
 }
 
 export function gerarBancoDemo(agora = new Date()) {
   const aleatorio = criarAleatorio(SEMENTE);
+  const inicio = new Date(agora.getFullYear(), agora.getMonth() - (MESES_DE_HISTORICO - 1), 1);
   const db = {
     versao: VERSAO_BANCO,
     criadoEm: agora.toISOString(),
@@ -163,36 +213,109 @@ export function gerarBancoDemo(agora = new Date()) {
     // Estoque "infinito" durante a geração; o estoque atual é definido no final
     produtos: PRODUTOS.map(({ popularidade: _popularidade, ...produto }) => ({ ...produto, estoque: Number.MAX_SAFE_INTEGER })),
     clientes: CLIENTES.map(({ perfil: _perfil, ...cliente }) => ({ ...cliente, totalCompras: 0 })),
+    usuarios: USUARIOS.map((u) => ({
+      ...u,
+      criadoEm: inicio.toISOString(),
+      ultimoAcesso: u.ativo ? null : momento(inicio, 18).toISOString(),
+      senhaDemo: senhaDe(u.email),
+    })),
+    fornecedores: FORNECEDORES.map(({ produtos: _produtos, peso: _peso, ...fornecedor }) => ({ ...fornecedor })),
+    compras: [],
+    caixas: [],
     vendas: [],
     pedidos: [],
     transacoes: [],
+    auditoria: [],
     configuracoes: clonar(CONFIGURACOES_PADRAO),
-    sequencias: { venda: 1000, pedido: 100, transacao: 0, produto: PRODUTOS.length, cliente: CLIENTES.length },
+    sequencias: {
+      venda: 1000, pedido: 100, transacao: 0, produto: PRODUTOS.length, cliente: CLIENTES.length,
+      usuario: USUARIOS.length, fornecedor: FORNECEDORES.length, compra: 200, caixa: 0, movimentoCaixa: 0, auditoria: 0,
+    },
   };
 
-  const inicio = new Date(agora.getFullYear(), agora.getMonth() - (MESES_DE_HISTORICO - 1), 1);
+  const usuario = (id) => db.usuarios.find((u) => u.id === id);
+  const gerente = usuario('u2');
+  const inicioAuditoria = new Date(agora.getTime() - DIAS_DE_AUDITORIA * 86_400_000);
+  // A auditoria de exemplo cobre só os últimos dias, para não pesar o armazenamento do navegador
+  const auditar = (evento, dados, quem, quando) => {
+    if (quando >= inicioAuditoria && quando <= agora) registrarEvento(db, evento, dados, quem, quando);
+  };
+
   for (const dia = new Date(inicio); dia <= agora; dia.setDate(dia.getDate() + 1)) {
     const mesesDesdeInicio = (dia.getFullYear() - inicio.getFullYear()) * 12 + dia.getMonth() - inicio.getMonth();
     const crescimento = 1 + 0.04 * mesesDesdeInicio;
-    lancarDespesasDoDia(db, dia, aleatorio, crescimento);
+    const diasAteHoje = Math.round((momento(agora, 12) - momento(dia, 12)) / 86_400_000);
+    lancarDespesasDoDia(db, dia, aleatorio);
 
-    const domingo = dia.getDay() === 0;
-    const quantidade = Math.round((VENDAS_POR_DIA_DA_SEMANA[dia.getDay()] + aleatorio.inteiro(0, 3)) * crescimento);
-    // Horários em segundos desde a meia-noite, dentro do expediente
-    const abertura = 8 * 3600;
-    const fechamento = (domingo ? 13 : 20) * 3600;
-    const horarios = Array.from({ length: quantidade }, () => aleatorio.inteiro(abertura, fechamento - 1)).sort((a, b) => a - b);
-
-    for (const segundos of horarios) {
-      const momento = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), 0, 0, segundos);
-      if (momento > agora) break;
-      const venda = registrarVenda(db, montarVenda(aleatorio), momento);
-      if (aleatorio.proximo() < 0.02) {
-        const cancelamento = new Date(momento.getTime() + aleatorio.inteiro(2, 40) * 60_000);
-        if (cancelamento <= agora) {
-          cancelarVenda(db, venda.id, { motivo: aleatorio.ponderado(MOTIVOS_CANCELAMENTO, () => 1) }, cancelamento);
+    // Compras de reposição às segundas e quintas, recebidas no mesmo dia
+    if (dia.getDay() === 1 || dia.getDay() === 4) {
+      const criadaEm = momento(dia, 8, 30);
+      const recebidaEm = momento(dia, 10, 0);
+      if (criadaEm <= agora) {
+        const compra = criarCompra(db, montarCompra(aleatorio, aleatorio.decimal(350, 650) * crescimento), criadaEm, gerente);
+        auditar('compra.criada', compra, gerente, criadaEm);
+        if (recebidaEm <= agora) {
+          auditar('compra.recebida', receberCompra(db, compra.id, { atualizarCusto: true }, recebidaEm, gerente), gerente, recebidaEm);
         }
       }
+    }
+    // Uma compra cancelada há 10 dias e uma aguardando entrega desde ontem
+    if (diasAteHoje === 10) {
+      const compra = criarCompra(db, montarCompra(aleatorio, 400), momento(dia, 9), gerente);
+      auditar('compra.criada', compra, gerente, momento(dia, 9));
+      auditar('compra.cancelada', cancelarCompra(db, compra.id, { motivo: 'Fornecedor sem estoque' }, momento(dia, 11)), gerente, momento(dia, 11));
+    }
+    if (diasAteHoje === 1) {
+      const compra = criarCompra(db, { ...montarCompra(aleatorio, 500), observacoes: 'Entrega prevista para amanhã.' }, momento(dia, 16), gerente);
+      auditar('compra.criada', compra, gerente, momento(dia, 16));
+    }
+
+    // Caixa do dia: operador nos dias úteis, gerente no fim de semana
+    const abertura = momento(dia, 7, 50);
+    if (abertura > agora) continue;
+    const domingo = dia.getDay() === 0;
+    const operador = usuario(domingo || dia.getDay() === 6 ? 'u2' : 'u3');
+    operador.ultimoAcesso = abertura.toISOString();
+    auditar('sessao.login', operador, operador, abertura);
+    const caixa = abrirCaixa(db, { valorInicial: FUNDO_DE_TROCO }, operador, abertura);
+    auditar('caixa.aberto', caixa, operador, abertura);
+    const sessao = db.caixas.find((s) => s.id === caixa.id);
+
+    const quantidade = Math.round((VENDAS_POR_DIA_DA_SEMANA[dia.getDay()] + aleatorio.inteiro(0, 3)) * crescimento);
+    // Horários em segundos desde a meia-noite, dentro do expediente
+    const horarios = Array.from({ length: quantidade }, () => aleatorio.inteiro(8 * 3600, (domingo ? 13 : 20) * 3600 - 1)).sort((a, b) => a - b);
+    let sangriaFeita = false;
+
+    for (const segundos of horarios) {
+      const quando = momento(dia, 0, 0, segundos);
+      if (quando > agora) break;
+      // Sangria no meio do dia quando o caixa acumula muito dinheiro
+      if (!sangriaFeita && segundos >= 14 * 3600) {
+        sangriaFeita = true;
+        if (resumoSessao(db, sessao).esperadoEmDinheiro > 450) {
+          const horaSangria = momento(dia, 14);
+          auditar('caixa.movimento', movimentarCaixa(db, { tipo: 'sangria', valor: 300, motivo: 'Depósito no cofre' }, operador, horaSangria), operador, horaSangria);
+        }
+      }
+      const venda = registrarVenda(db, montarVenda(aleatorio), quando, operador);
+      auditar('venda.registrada', venda, operador, quando);
+      if (aleatorio.proximo() < 0.02) {
+        const cancelamento = new Date(quando.getTime() + aleatorio.inteiro(2, 40) * 60_000);
+        if (cancelamento <= agora) {
+          const cancelada = cancelarVenda(db, venda.id, { motivo: aleatorio.ponderado(MOTIVOS_CANCELAMENTO, () => 1) }, cancelamento, gerente);
+          auditar('venda.cancelada', cancelada, gerente, cancelamento);
+        }
+      }
+    }
+
+    // Fechamento com pequenas diferenças na conferência de vez em quando
+    const fechamento = momento(dia, domingo ? 13 : 20, 15);
+    if (fechamento <= agora) {
+      const { esperadoEmDinheiro } = resumoSessao(db, sessao);
+      const sorteio = aleatorio.proximo();
+      const diferenca = sorteio < 0.8 ? 0 : sorteio < 0.92 ? -aleatorio.decimal(0.5, 5) : aleatorio.decimal(0.5, 3);
+      const fechado = fecharCaixa(db, { valorContado: arredondar(esperadoEmDinheiro + diferenca) }, operador, fechamento);
+      auditar('caixa.fechado', fechado, operador, fechamento);
     }
   }
 

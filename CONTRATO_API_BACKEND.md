@@ -4,8 +4,8 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
 
 > **Situação atual do front-end:** todas as telas já consomem esta API.
 > - Com `VITE_API_URL` definida, as chamadas vão para o backend real.
-> - Sem ela, um **servidor de demonstração** dentro do navegador (`src/api/demo/`) responde exatamente estas rotas. Ele é a **implementação de referência** do contrato: na dúvida sobre uma regra, consulte `src/api/demo/dominio.js`.
-> - Para verificar se o backend segue o contrato, rode os testes da seção [10](#10-validando-o-backend).
+> - Sem ela, um **servidor de demonstração** dentro do navegador (`src/api/demo/`) responde exatamente estas rotas. Ele é a **implementação de referência** do contrato: na dúvida sobre uma regra, consulte `src/api/demo/dominio/` (um arquivo por módulo) e `src/lib/permissoes.js`.
+> - Para verificar se o backend segue o contrato, rode os testes da seção [16](#16-validando-o-backend).
 
 ---
 
@@ -21,7 +21,15 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
 7. [Financeiro](#7-financeiro-apifinanceiro)
 8. [Dashboard & Relatórios](#8-dashboard--relatórios-apidashboard-e-apirelatorios)
 9. [Configurações](#9-configurações-apiconfiguracoes)
-10. [Validando o backend](#10-validando-o-backend)
+**Backoffice (retaguarda)**
+
+10. [Perfis e permissões](#10-perfis-e-permissões)
+11. [Usuários](#11-usuários-apiusuarios)
+12. [Caixa](#12-caixa-apicaixa)
+13. [Fornecedores](#13-fornecedores-apifornecedores)
+14. [Compras e Entrada de Mercadorias](#14-compras-e-entrada-de-mercadorias-apicompras)
+15. [Auditoria](#15-auditoria-apiauditoria)
+16. [Validando o backend](#16-validando-o-backend)
 
 ---
 
@@ -31,6 +39,7 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
   - URL completa (ex.: `http://localhost:3000`): o navegador chama o backend diretamente — o backend precisa liberar **CORS** para a origem do front, com os headers `Content-Type` e `Authorization`.
   - `VITE_API_URL=/`: o front chama a própria origem. Em desenvolvimento, `API_PROXY_TARGET=http://localhost:3000` faz o Vite encaminhar `/api` para o backend (sem CORS). Em produção, use um proxy/rewrite de `/api` para o backend ou sirva o front pelo próprio backend.
 - **Formato**: `Content-Type: application/json` no envio e no retorno; campos em português e `camelCase`.
+- **Permissões**: cada rota exige uma permissão do perfil do usuário (seção 10). Sem ela → `403`, verificado **antes** de procurar o registro. Ao receber `403`, o front mostra a `mensagem` e mantém o usuário na tela.
 - **Autenticação**: todas as rotas, exceto as marcadas como públicas na seção 1, exigem `Authorization: Bearer <access_token>`. Sem token ou com token inválido/expirado → `401`. Ao receber `401` em qualquer rota autenticada, o front descarta o token e volta para o login, guardando a página em que o usuário estava.
 - **IDs**: sempre `string` (ex.: `"p1"`, `"c3"`, `"v1025"`, `"ped-107"`, `"t9"`). O front não presume o formato do id; o número da venda fica no campo `numero`.
 - **Valores monetários**: `number` em reais com até 2 casas decimais (ex.: `35.96`). Nunca strings formatadas.
@@ -48,9 +57,9 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
 |---|---|
 | `400` | Dados inválidos (campo obrigatório ausente, valor fora da regra, período inválido) |
 | `401` | Não autenticado, token inválido ou credenciais incorretas no login |
-| `403` | Autenticado, mas sem permissão |
+| `403` | Autenticado, mas o perfil não tem permissão (seção 10), ou login de usuário desativado |
 | `404` | Registro não encontrado |
-| `409` | Conflito (e-mail/SKU/documento duplicado, estoque insuficiente, venda já cancelada) |
+| `409` | Conflito (e-mail/SKU/documento duplicado, estoque insuficiente, venda já cancelada, caixa fechado) |
 | `500` | Erro inesperado |
 
 ```json
@@ -65,6 +74,7 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
 
 > O token é salvo no navegador e enviado como `Bearer` em todas as requisições.
 > Login com Google existe apenas no modo demonstração; não há endpoint de OAuth neste contrato.
+> O campo `role` do usuário (`admin`, `gerente` ou `operador`) define o que ele pode fazer (seção 10). O cadastro público (1.1) cria a conta da empresa, com perfil `admin`; os demais usuários são criados pelo administrador em Usuários (seção 11).
 
 ### 1.1 Cadastro de Usuário (pública)
 - **Endpoint**: `POST /api/auth/register`
@@ -149,7 +159,8 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
   }
 }
 ```
-- **Erros**: e-mail ou senha incorretos → **`401`** (o front exibe "E-mail ou senha incorretos"). Qualquer outro status exibe o campo `mensagem` retornado.
+- **Erros**: e-mail ou senha incorretos → **`401`** (o front exibe "E-mail ou senha incorretos"); usuário desativado → **`403`** com `mensagem`. Qualquer outro status exibe o campo `mensagem` retornado.
+- O login atualiza o `ultimoAcesso` do usuário (seção 11).
 
 ---
 
@@ -230,6 +241,15 @@ Botão **Encerrar outras sessões** em Configurações → Segurança.
   { "id": "padaria", "nome": "Padaria", "cor": "#9AE8DB" }
 ]
 ```
+
+---
+
+### 2.1.1 Criar, Atualizar e Excluir Categoria
+Tela **Backoffice → Categorias** (permissão `categorias.gerenciar`).
+- **Endpoints**: `POST /api/categorias` (`201`), `PUT /api/categorias/:id` (`200`) e `DELETE /api/categorias/:id` (`200`, `{ "sucesso": true, "mensagem": "..." }`)
+- **Request Body**: `{ "nome": "Hortifruti", "cor": "#4CAF50" }`
+- **Regras**: `nome` obrigatório (`400`); `cor` no formato `#RRGGBB` (`400`; padrão `#339989`, salva em maiúsculas); nome já usado, ignorando maiúsculas e acentos → `409`; excluir categoria com produtos → `409` (a `mensagem` diz quantos).
+- **id**: gerado pelo backend a partir do nome (ex.: `"hortifruti"`) e **não muda** quando o nome muda, porque os produtos guardam o id da categoria.
 
 ---
 
@@ -496,10 +516,14 @@ Usado na resposta do `POST /api/vendas`, do detalhe (5.3) e do cancelamento (5.4
       "totalItem": 39.96
     }
   ],
-  "data": "2026-10-10T14:35:00-03:00"
+  "data": "2026-10-10T14:35:00-03:00",
+  "caixaId": "cx165",
+  "usuarioId": "u3",
+  "operador": "Lucas Ferreira"
 }
 ```
-- `status`: `"Concluída"` ou `"Cancelada"`. Vendas canceladas também trazem `canceladaEm` (data e hora) e `motivoCancelamento` (texto ou `null`).
+- `status`: `"Concluída"` ou `"Cancelada"`. Vendas canceladas também trazem `canceladaEm` (data e hora), `motivoCancelamento` (texto ou `null`) e `canceladaPor` (nome de quem cancelou).
+- `caixaId`, `usuarioId` e `operador`: o caixa (seção 12) e o usuário que registrou a venda. `operador` aparece no cupom. `caixaId` é `null` quando a venda foi feita sem caixa aberto (com `pdv.exigirCaixaAberto` desligado).
 - `cliente` é `"Consumidor final"` e `clienteId` é `null` quando a venda não tem cliente.
 - `valorRecebido` e `troco` são `null` quando o pagamento não é em dinheiro.
 - Cada item guarda `nome` e `categoria` do momento da venda, para o histórico e os relatórios não dependerem do cadastro atual.
@@ -520,12 +544,14 @@ Usado na resposta do `POST /api/vendas`, do detalhe (5.3) e do cancelamento (5.4
   - produto inexistente → `400`; estoque insuficiente em qualquer item → `409`, citando o produto na `mensagem`
   - pagamento em dinheiro sem `valorRecebido` ou com `valorRecebido < total` → `400`
   - carrinho vazio → `400`
+  - com `configuracoes.pdv.exigirCaixaAberto` ligado (padrão) e o usuário sem caixa aberto → `409` ("Abra o caixa antes de registrar vendas."). O PDV então mostra a abertura de caixa
 - **Efeitos (na mesma transação do banco, só depois de todas as validações)**:
   1. baixa `quantidade` do estoque de cada produto
   2. cria a venda com status `"Concluída"` e o próximo `numero` sequencial
   3. cria um pedido no Kanban com status `"pendente"` (seção 6)
   4. lança uma **entrada** no financeiro: descrição `"Venda PDV #<numero>"`, categoria `"Vendas"`, data do dia, `vendaId` preenchido (seção 7). Venda de total zero (100% de desconto) não gera lançamento
   5. se houver `clienteId`, soma `total` ao `totalCompras` do cliente
+  6. vincula a venda ao caixa aberto do usuário (`caixaId`) e guarda `usuarioId` e `operador`
 - **Request Body**:
 ```json
 {
@@ -556,6 +582,7 @@ Tela **Vendas**.
   - `clienteId` — vendas de um cliente (botão "Ver compras" em Clientes)
   - `busca` — nome do cliente ou parte do número da venda
   - `numero` — busca exata pelo número da venda; **ignora o período e os demais filtros** (usado pela busca global do cabeçalho)
+  - `caixaId` — vendas de um caixa (detalhe do caixa no backoffice)
 - **Response Body (`200 OK`)**: resumo das vendas, da mais recente para a mais antiga. `itens` é a soma das quantidades.
 ```json
 [
@@ -568,7 +595,8 @@ Tela **Vendas**.
     "status": "Concluída",
     "itens": 4,
     "formaPagamento": "dinheiro",
-    "data": "2026-10-10T14:35:00-03:00"
+    "data": "2026-10-10T14:35:00-03:00",
+    "operador": "Lucas Ferreira"
   }
 ]
 ```
@@ -590,10 +618,11 @@ Botão **Cancelar venda** no detalhe da venda.
   "motivo": "Cliente desistiu da compra"
 }
 ```
+- **Permissão**: `vendas.cancelar` (o operador de caixa não cancela vendas).
 - **Regras**: venda inexistente → `404`; venda já cancelada → `409`.
 - **Efeitos** (desfazem os da venda):
   1. devolve ao estoque a quantidade de cada item (produtos excluídos são ignorados)
-  2. marca a venda como `"Cancelada"`, com `canceladaEm` e `motivoCancelamento`
+  2. marca a venda como `"Cancelada"`, com `canceladaEm`, `motivoCancelamento` e `canceladaPor`
   3. abate o `total` do `totalCompras` do cliente (sem ficar negativo)
   4. tira o pedido do Kanban (o pedido passa a `"cancelado"` e deixa de aparecer em 6.1)
   5. lança uma **saída** no financeiro: descrição `"Estorno da venda #<numero>"`, categoria `"Estornos"`, data do cancelamento, `vendaId` preenchido
@@ -659,14 +688,14 @@ Tabela "Últimas Vendas" do Dashboard.
 ### Categorias de movimentação
 - **Saída** (lançamento manual): `"Fornecedores"`, `"Fixos"`, `"Pessoal"`, `"Impostos"`, `"Outros"`
 - **Entrada** (lançamento manual): `"Vendas"`, `"Serviços"`, `"Outros"`
-- **Automáticas**: `"Vendas"` (entrada gerada pela venda) e `"Estornos"` (saída gerada pelo cancelamento). `"Estornos"` não é aceita no lançamento manual.
+- **Automáticas**: `"Vendas"` (entrada gerada pela venda), `"Estornos"` (saída gerada pelo cancelamento) e `"Fornecedores"` (saída gerada pelo recebimento de uma compra, seção 14). `"Estornos"` não é aceita no lançamento manual.
 
 ---
 
 ### 7.1 Listar Movimentações / Transações
 - **Endpoint**: `GET /api/financeiro/transacoes`
 - **Query Params opcionais**: `dataInicio`, `dataFim` (padrão: últimos 30 dias) e `tipo` (`entrada` ou `saida` → senão `400`)
-- **Response Body (`200 OK`)**: ordenado por `data` decrescente. Lançamentos automáticos trazem `vendaId` (o front cria um link para a venda). Os cards de Receitas, Despesas e Saldo do período e a exportação CSV são calculados pelo front a partir desta lista.
+- **Response Body (`200 OK`)**: ordenado por `data` decrescente. Lançamentos automáticos trazem `vendaId` ou `compraId` (o front cria um link para a venda ou a compra). Os cards de Receitas, Despesas e Saldo do período e a exportação CSV são calculados pelo front a partir desta lista.
 ```json
 [
   {
@@ -844,24 +873,341 @@ Tabela "Últimas Vendas" do Dashboard.
   },
   "seguranca": {
     "doisFatores": false
+  },
+  "pdv": {
+    "exigirCaixaAberto": true
   }
 }
 ```
+- `pdv.exigirCaixaAberto` (padrão `true`): exige caixa aberto para registrar vendas (seção 12). Ausente = `true`.
 
 ---
 
 ### 9.2 Atualizar Configurações
 - **Endpoint**: `PUT /api/configuracoes`
+- **Permissão**: `configuracoes.gerenciar` (só administrador). A leitura (9.1) é liberada a todos, porque o cupom usa os dados da loja.
 - **Regras** (violação → `400`): `loja.nome` obrigatório; `loja.cnpj`, se informado, com 14 dígitos; `loja.telefone`, se informado, com 10 ou 11 dígitos; `impressao.modelo` entre os três modelos aceitos.
 - **Request Body**: o objeto completo (mesmo formato do 9.1).
 - **Response Body (`200 OK`)**: as configurações salvas (mesmo formato do 9.1).
 
 ---
 
-## 10. Validando o backend
+## 10. Perfis e permissões
+
+Todo usuário tem um perfil (`role`), devolvido no login e em `GET /api/auth/me`. O front esconde menus e telas conforme a tabela abaixo (`src/lib/permissoes.js`), mas **o backend deve aplicar as mesmas regras** e responder `403` com `mensagem` quando o perfil não tiver a permissão. A permissão é verificada **antes** de buscar o registro: um operador que tenta cancelar uma venda inexistente recebe `403`, não `404`.
+
+| Permissão | Rotas | Administrador (`admin`) | Gerente (`gerente`) | Operador de caixa (`operador`) |
+|---|---|:-:|:-:|:-:|
+| `dashboard.ver` | `GET /api/dashboard/kpis`, `GET /api/vendas/recentes` | ✓ | ✓ | |
+| `pdv.operar` | `POST /api/vendas`, `/api/pedidos/*`, `/api/caixa/atual`, `abrir`, `movimentos`, `fechar`, `GET /api/caixa/sessoes/:id` (só os próprios) | ✓ | ✓ | ✓ |
+| `vendas.ver` | `GET /api/vendas`, `GET /api/vendas/:id` | ✓ | ✓ | ✓ |
+| `vendas.cancelar` | `POST /api/vendas/:id/cancelar` | ✓ | ✓ | |
+| `clientes.gerenciar` | `POST`/`PUT /api/clientes` | ✓ | ✓ | ✓ |
+| `clientes.excluir` | `DELETE /api/clientes/:id` | ✓ | ✓ | |
+| `produtos.gerenciar` | `POST`/`PUT`/`DELETE /api/produtos` | ✓ | ✓ | |
+| `categorias.gerenciar` | `POST`/`PUT`/`DELETE /api/categorias` | ✓ | ✓ | |
+| `estoque.gerenciar` | `POST /api/estoque/movimentacoes` | ✓ | ✓ | |
+| `financeiro.ver` | `/api/financeiro/*` | ✓ | ✓ | |
+| `relatorios.ver` | `/api/relatorios/*` | ✓ | ✓ | |
+| `fornecedores.gerenciar` | `/api/fornecedores/*` | ✓ | ✓ | |
+| `compras.gerenciar` | `/api/compras/*` | ✓ | ✓ | |
+| `caixa.ver-todos` | `GET /api/caixa/sessoes`, sessões de outros usuários | ✓ | ✓ | |
+| `usuarios.gerenciar` | `/api/usuarios/*` | ✓ | | |
+| `auditoria.ver` | `GET /api/auditoria` | ✓ | | |
+| `configuracoes.gerenciar` | `PUT /api/configuracoes` | ✓ | | |
+
+Rotas sem permissão específica exigem apenas um usuário autenticado: `GET` de produtos, categorias, estoque, clientes e configurações, `GET /api/auth/me` e `POST /api/auth/sessions/revoke-others`.
+
+---
+
+## 11. Usuários (`/api/usuarios`)
+
+Os usuários não são excluídos: são **desativados**, para manter o histórico de vendas, caixas e auditoria. Um usuário desativado não consegue entrar (`403` no login) e seus tokens deixam de valer (`401`).
+
+### 11.1 Listar Usuários
+- **Endpoint**: `GET /api/usuarios`
+- **Query Params opcionais**: `busca` (nome ou e-mail), `role`, `ativo` (`true`/`false`)
+- **Response Body (`200 OK`)**: nunca inclui senha ou hash.
+```json
+[
+  {
+    "id": "u3",
+    "nome": "Lucas Ferreira",
+    "email": "operador@nexora.com",
+    "role": "operador",
+    "ativo": true,
+    "criadoEm": "2026-05-01T03:00:00Z",
+    "ultimoAcesso": "2026-10-09T10:50:00Z"
+  }
+]
+```
+
+---
+
+### 11.2 Criar Usuário
+- **Endpoint**: `POST /api/usuarios`
+- **Regras**: `nome` obrigatório e `email` válido (`400`); e-mail já usado (`409`, sem diferenciar maiúsculas); `role` entre `admin`, `gerente` e `operador` (`400`).
+- **Senha**: o administrador não define a senha. O backend envia ao usuário um e-mail de convite com link para `<url-do-front>/redefinir-senha?token=<token>` (mesmo fluxo da seção 1.7). No modo demonstração a senha inicial é `nexora123`.
+- **Request Body**:
+```json
+{
+  "nome": "Carla Souza",
+  "email": "carla@nexora.com",
+  "role": "operador"
+}
+```
+- **Response Body (`201 Created`)**: o usuário completo (formato do 11.1), com `ativo: true` e `ultimoAcesso: null`.
+
+---
+
+### 11.3 Atualizar Usuário (inclui desativar e reativar)
+- **Endpoint**: `PUT /api/usuarios/:id`
+- **Request Body**: `nome`, `email`, `role` e `ativo` (booleano; ausente = mantém).
+- **Regras**: as mesmas da criação, mais as proteções para ninguém trancar o sistema (`409`):
+  - o usuário logado não pode desativar a si mesmo nem alterar o próprio perfil;
+  - o sistema precisa manter ao menos um administrador ativo.
+- **Response Body (`200 OK`)**: o usuário atualizado.
+
+---
+
+### 11.4 Enviar Redefinição de Senha
+- **Endpoint**: `POST /api/usuarios/:id/redefinir-senha`
+- **Regras**: usuário inexistente → `404`; usuário desativado → `409`.
+- **Response Body (`200 OK`)**: o backend envia o e-mail de redefinição (seção 1.6).
+```json
+{
+  "sucesso": true,
+  "mensagem": "E-mail de redefinição de senha enviado para carla@nexora.com."
+}
+```
+
+---
+
+## 12. Caixa (`/api/caixa`)
+
+Cada usuário tem **no máximo um caixa aberto**. As vendas registradas por ele entram nesse caixa (`venda.caixaId`). Com `configuracoes.pdv.exigirCaixaAberto` ligado (padrão), `POST /api/vendas` sem caixa aberto responde `409` ("Abra o caixa antes de registrar vendas.").
+
+### Formato da sessão de caixa
+```json
+{
+  "id": "cx165",
+  "numero": 165,
+  "usuarioId": "u1",
+  "operador": "Administrador Nexora",
+  "status": "fechada",
+  "abertaEm": "2026-10-11T16:08:00Z",
+  "valorInicial": 150.00,
+  "movimentos": [
+    { "id": "mv12", "tipo": "sangria", "valor": 50.00, "motivo": "Cofre", "data": "2026-10-11T16:08:40Z" }
+  ],
+  "fechadaEm": "2026-10-11T16:09:10Z",
+  "valorContado": 98.00,
+  "observacoes": null,
+  "resumo": {
+    "quantidadeVendas": 0,
+    "vendasCanceladas": 1,
+    "totalVendas": 0.00,
+    "porFormaPagamento": { "dinheiro": 0.00, "cartao": 0.00, "pix": 0.00 },
+    "suprimentos": 0.00,
+    "sangrias": 50.00,
+    "esperadoEmDinheiro": 100.00,
+    "diferenca": -2.00
+  }
+}
+```
+- `resumo` é calculado pelo backend a cada resposta: considera só vendas **concluídas** do caixa (canceladas contam em `vendasCanceladas`, porque o dinheiro voltou ao cliente).
+- `esperadoEmDinheiro` = `valorInicial` + vendas em dinheiro + suprimentos − sangrias.
+- `diferenca` = `valorContado` − `esperadoEmDinheiro` (negativa = falta, positiva = sobra); `null` enquanto o caixa está aberto.
+
+---
+
+### 12.1 Caixa Atual
+- **Endpoint**: `GET /api/caixa/atual`
+- **Response**: `200 OK` com o caixa aberto do usuário logado, ou **`204 No Content`** quando ele não tem caixa aberto.
+
+### 12.2 Abrir Caixa
+- **Endpoint**: `POST /api/caixa/abrir`
+- **Request Body**: `{ "valorInicial": 150.00 }` (fundo de troco, ≥ 0 → senão `400`)
+- **Regras**: usuário já com caixa aberto → `409`.
+- **Response Body (`201 Created`)**: a sessão aberta.
+
+### 12.3 Sangria e Suprimento
+- **Endpoint**: `POST /api/caixa/movimentos`
+- **Request Body**: `{ "tipo": "sangria", "valor": 50.00, "motivo": "Depósito no cofre" }`
+- **Regras**: `tipo` é `sangria` (retirada) ou `suprimento` (reforço) → senão `400`; `valor` > 0 → senão `400`; sem caixa aberto → `409`; sangria maior que o `esperadoEmDinheiro` → `409`.
+- **Response Body (`201 Created`)**: a sessão atualizada.
+
+### 12.4 Fechar Caixa
+- **Endpoint**: `POST /api/caixa/fechar`
+- **Request Body**: `{ "valorContado": 98.00, "observacoes": "Faltaram R$ 2" }` (`valorContado` obrigatório, ≥ 0 → senão `400`)
+- **Regras**: sem caixa aberto → `409`.
+- **Response Body (`200 OK`)**: a sessão fechada, com `diferenca` calculada. O front mostra e imprime o relatório de fechamento.
+
+### 12.5 Histórico de Caixas
+- **Endpoint**: `GET /api/caixa/sessoes`
+- **Query Params opcionais**: `dataInicio`, `dataFim` (pela data de abertura; padrão: últimos 30 dias), `status` (`aberta`/`fechada` → senão `400`), `usuarioId`
+- **Response Body (`200 OK`)**: lista de sessões (formato acima), da abertura mais recente para a mais antiga.
+
+### 12.6 Detalhe do Caixa
+- **Endpoint**: `GET /api/caixa/sessoes/:id`
+- **Regras**: o operador só vê os próprios caixas (`403` para os de outros, salvo com `caixa.ver-todos`); inexistente → `404`.
+
+---
+
+## 13. Fornecedores (`/api/fornecedores`)
+
+### 13.1 Listar Fornecedores
+- **Endpoint**: `GET /api/fornecedores`
+- **Query Params opcionais**: `busca` (razão social, nome fantasia, contato ou dígitos do CNPJ)
+- **Response Body (`200 OK`)**:
+```json
+[
+  {
+    "id": "f1",
+    "razaoSocial": "Atacadão Central Distribuidora LTDA",
+    "nomeFantasia": "Atacadão Central",
+    "cnpj": "11.222.333/0001-81",
+    "contato": "Roberto Nunes",
+    "telefone": "(11) 4002-8922",
+    "email": "vendas@atacadaocentral.com.br",
+    "prazoPagamentoDias": 28,
+    "observacoes": "Entrega às segundas e quintas."
+  }
+]
+```
+
+### 13.2 Cadastrar / Atualizar Fornecedor
+- **Endpoints**: `POST /api/fornecedores` (`201`) e `PUT /api/fornecedores/:id` (`200`); ambos devolvem o fornecedor completo.
+- **Regras** (`400`): `razaoSocial` obrigatória; `cnpj` opcional, com 14 dígitos (enviado com máscara); `telefone` e `email` como em clientes; `prazoPagamentoDias` inteiro de 0 a 365 (padrão 30). CNPJ já cadastrado → `409`.
+
+### 13.3 Excluir Fornecedor
+- **Endpoint**: `DELETE /api/fornecedores/:id`
+- **Regras**: fornecedor com compras registradas → `409` (o histórico de compras depende dele).
+
+---
+
+## 14. Compras e Entrada de Mercadorias (`/api/compras`)
+
+Uma compra nasce **aberta** (pedido feito ao fornecedor) e não mexe no estoque. Ao ser **recebida**, a mercadoria entra no estoque e a despesa vai para o financeiro. Só compras abertas podem ser alteradas, recebidas ou canceladas (`409` nos demais casos).
+
+### Formato da compra
+```json
+{
+  "id": "cp249",
+  "numero": 249,
+  "fornecedorId": "f5",
+  "fornecedor": "Vale Verde",
+  "status": "recebida",
+  "itens": [
+    { "produtoId": "p5", "nome": "Feijão Carioca 1kg", "quantidade": 12, "custoUnitario": 6.50, "totalItem": 78.00 }
+  ],
+  "total": 78.00,
+  "observacoes": "",
+  "criadaEm": "2026-10-11T16:09:30Z",
+  "criadaPor": "Administrador Nexora",
+  "recebidaEm": "2026-10-11T16:09:45Z",
+  "recebidaPor": "Administrador Nexora",
+  "vencimento": "2026-11-08",
+  "canceladaEm": null,
+  "motivoCancelamento": null
+}
+```
+`status`: `aberta`, `recebida` ou `cancelada`. `fornecedor` é o nome fantasia (ou a razão social) no momento da compra.
+
+### 14.1 Listar Compras
+- **Endpoint**: `GET /api/compras`
+- **Query Params opcionais**: `dataInicio`, `dataFim` (pela data de criação; padrão: últimos 90 dias), `status` (→ senão `400`), `fornecedorId`, `busca` (fornecedor ou número). Com `status=aberta` o período é ignorado: todas as compras aguardando recebimento aparecem.
+- **Response Body (`200 OK`)**: resumo, da mais recente para a mais antiga (`itens` = soma das quantidades).
+```json
+[
+  { "id": "cp249", "numero": 249, "fornecedorId": "f5", "fornecedor": "Vale Verde", "status": "aberta", "itens": 12, "total": 78.00, "criadaEm": "2026-10-11T16:09:30Z", "recebidaEm": null, "vencimento": null }
+]
+```
+
+### 14.2 Criar / Alterar Compra
+- **Endpoints**: `POST /api/compras` (`201`) e `PUT /api/compras/:id` (`200`, só compras abertas); ambos devolvem a compra completa.
+- **Request Body**:
+```json
+{
+  "fornecedorId": "f5",
+  "itens": [{ "produtoId": "p5", "quantidade": 12, "custoUnitario": 6.50 }],
+  "observacoes": ""
+}
+```
+- **Regras** (`400`): fornecedor e produtos existentes; ao menos um item; sem produto repetido; `quantidade` inteira ≥ 1; `custoUnitario` > 0. O backend calcula `totalItem` e `total`.
+
+### 14.3 Detalhe da Compra
+- **Endpoint**: `GET /api/compras/:id` → a compra completa, ou `404`.
+
+### 14.4 Receber Compra
+- **Endpoint**: `POST /api/compras/:id/receber`
+- **Request Body**: `{ "atualizarCusto": true }` (padrão `true`)
+- **Efeitos** (na mesma transação):
+  1. soma a `quantidade` de cada item ao estoque do produto (produto excluído → `409`, nada é aplicado)
+  2. com `atualizarCusto`, o `custo` de cada produto passa a ser o `custoUnitario` da compra
+  3. status `recebida`, com `recebidaEm`, `recebidaPor` e `vencimento` = data do recebimento + `prazoPagamentoDias` do fornecedor
+  4. lança uma **saída** no financeiro: descrição `"Compra #<numero> - <fornecedor>"`, categoria `"Fornecedores"`, data do recebimento, `compraId` preenchido
+- **Response Body (`200 OK`)**: a compra completa mais `alertasPreco` (não fica salvo), com os produtos cujo novo custo ficou acima do preço de venda:
+```json
+{
+  "id": "cp249",
+  "status": "recebida",
+  "alertasPreco": [{ "produtoId": "p12", "nome": "Bolo de Chocolate fatia", "custo": 9.10, "preco": 8.50 }]
+}
+```
+
+### 14.5 Cancelar Compra
+- **Endpoint**: `POST /api/compras/:id/cancelar`
+- **Request Body** (opcional): `{ "motivo": "Fornecedor sem estoque" }`
+- **Response Body (`200 OK`)**: a compra com `status: "cancelada"`, `canceladaEm` e `motivoCancelamento`.
+
+---
+
+## 15. Auditoria (`/api/auditoria`)
+
+O backend registra quem fez cada alteração. O front só lê.
+
+### Ações auditadas
+| Área (`entidade`) | Ações (`acao`) |
+|---|---|
+| `sessao` | `entrou` (login), `encerrou` (outras sessões) |
+| `usuario` | `criou`, `atualizou` (inclui desativar e enviar redefinição de senha) |
+| `produto`, `categoria`, `cliente`, `fornecedor` | `criou`, `atualizou`, `excluiu` |
+| `estoque` | `movimentou` |
+| `venda` | `registrou`, `cancelou` |
+| `pedido` | `atualizou` (mudança de coluna no Kanban) |
+| `transacao` | `criou` (lançamento manual) |
+| `compra` | `criou`, `atualizou`, `recebeu`, `cancelou` |
+| `caixa` | `abriu`, `movimentou` (sangria/suprimento), `fechou` |
+| `configuracoes` | `atualizou` |
+
+### 15.1 Listar Registros
+- **Endpoint**: `GET /api/auditoria`
+- **Query Params opcionais**: `dataInicio`, `dataFim` (padrão: últimos 7 dias), `usuarioId`, `entidade` (valor fora da tabela → `400`), `busca` (na descrição ou no nome do usuário)
+- **Response Body (`200 OK`)**: do mais recente para o mais antigo (o backend pode limitar a quantidade; o servidor de demonstração devolve no máximo 1000).
+```json
+[
+  {
+    "id": "a512",
+    "data": "2026-10-11T16:09:00Z",
+    "usuarioId": "u1",
+    "usuario": "Administrador Nexora",
+    "acao": "cancelou",
+    "entidade": "venda",
+    "entidadeId": "v3142",
+    "descricao": "Cancelou a venda #3142 de R$ 35,96: Teste e2e"
+  }
+]
+```
+`descricao` é um texto pronto para exibir; o front não interpreta seu conteúdo.
+
+---
+
+## 16. Validando o backend
 
 Os testes em `src/api/contrato.test.js` verificam este contrato de ponta a ponta. Eles:
-- validam as regras de produtos, estoque, clientes, vendas, cancelamento, pedidos, financeiro, relatórios e configurações;
+- validam as regras de produtos, categorias, estoque, clientes, caixa, vendas, cancelamento, pedidos, fornecedores, compras, usuários, financeiro, relatórios, configurações e auditoria;
+- verificam as permissões de cada perfil (`403` para o operador nas rotas de gestão);
 - conferem os efeitos de uma venda e de um cancelamento em todas as telas;
 - verificam os códigos de erro e o campo `mensagem`.
 
@@ -877,5 +1223,8 @@ CONTRATO_EMAIL=admin@empresa.com \
 CONTRATO_SENHA=senha-do-usuario \
 npm run test:contrato
 ```
+
+- `CONTRATO_EMAIL` deve ser de um **administrador**. Se ele já tiver um caixa aberto, os testes usam esse caixa e pulam o fechamento.
+- Para testar também as permissões do operador, informe um usuário com perfil `operador` em `CONTRATO_EMAIL_OPERADOR` e `CONTRATO_SENHA_OPERADOR`. Sem eles, esses testes são pulados.
 
 Com o backend real, os testes também validam o login (`401` com senha errada) e o `GET /api/auth/me`.
