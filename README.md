@@ -28,6 +28,7 @@ A interface utiliza um esquema de cores moderno de alto contraste para máxima l
 - **Carrinho Dinâmico**: Gestão de quantidades (limitadas ao estoque disponível), desconto percentual, cliente da venda e cancelamento.
 - **Checkout Multimeios**: Pagamento via PIX, Cartão e Dinheiro (com cálculo automático de troco e bloqueio de valor insuficiente).
 - **Venda integrada**: ao finalizar, baixa o estoque, cria o pedido no Kanban, lança a entrada no Financeiro e soma ao histórico do cliente.
+- **Controle de caixa**: abertura com fundo de troco, sangria, suprimento e fechamento com conferência (falta/sobra) e relatório impresso. A venda só é liberada com o caixa aberto (opção em Configurações → PDV).
 - **Cupom de venda**: pré-visualização e impressão do cupom não fiscal (térmica 80mm, 58mm ou A4), com impressão automática opcional.
 - **Atalhos de teclado**: `F2` busca, `F3` código de barras, `F4` finalizar venda, `Enter` confirma o pagamento e `Esc` fecha janelas.
 - **Kanban de Pedidos Integrado**: Alternância com 1 clique para visão de pedidos em preparação.
@@ -67,13 +68,30 @@ A interface utiliza um esquema de cores moderno de alto contraste para máxima l
 - Vendas por dia, por categoria, produtos mais vendidos e melhores clientes, todos no período escolhido.
 - Exportação de cada relatório em CSV (compatível com Excel).
 
-### 9. ⚙️ Configurações e navegação
-- Dados da loja e mensagem do cupom, modelo de impressão, alertas e segurança, salvos no backend.
+### 9. 🗄️ Backoffice (retaguarda)
+- **Caixa**: histórico de aberturas e fechamentos por operador, com vendas por forma de pagamento, sangrias, suprimentos e diferença.
+- **Compras e entrada de mercadorias**: pedido ao fornecedor, recebimento que soma ao estoque, atualiza o custo (com alerta de custo acima do preço) e lança a despesa no Financeiro com vencimento pelo prazo do fornecedor.
+- **Fornecedores**: cadastro com CNPJ, contato e prazo de pagamento.
+- **Categorias**: cadastro com cor, usada no PDV e nos relatórios.
+- **Usuários e perfis**: administrador, gerente e operador de caixa; desativação (sem apagar histórico) e envio de redefinição de senha.
+- **Auditoria**: quem fez o quê e quando (vendas, cancelamentos, preços, estoque, caixa, compras, usuários).
+
+#### Perfis de acesso
+| Perfil | Acesso |
+|---|---|
+| Administrador | Tudo, inclusive usuários, auditoria e configurações |
+| Gerente | Operação e gestão: dashboard, vendas e cancelamentos, estoque, financeiro, relatórios, caixa de todos, compras, fornecedores e categorias |
+| Operador de caixa | PDV, o próprio caixa, histórico de vendas e cadastro de clientes |
+
+O menu, a busca global e as notificações mostram só o que o perfil pode usar, e o backend aplica as mesmas regras (`src/lib/permissoes.js`).
+
+### 10. ⚙️ Configurações e navegação
+- Dados da loja e mensagem do cupom, modelo de impressão, regras do PDV, alertas e segurança, salvos no backend.
 - **Busca global** (`Ctrl+K`): páginas, produtos, clientes e vendas pelo número, ignorando acentos.
-- **Notificações** reais no sino: produtos sem estoque ou com estoque baixo e pedidos pendentes.
+- **Notificações** reais no sino: produtos sem estoque ou com estoque baixo, compras aguardando recebimento e pedidos pendentes.
 
 ### 💾 Modo demonstração
-Sem `VITE_API_URL`, um servidor de demonstração dentro do navegador (`src/api/demo/`) responde às mesmas rotas do contrato da API. Ele gera um histórico de cerca de 6 meses de vendas, despesas e pedidos a partir da data atual e salva tudo no `localStorage`. Para voltar aos dados iniciais, use **Configurações → Dados → Restaurar**.
+Sem `VITE_API_URL`, um servidor de demonstração dentro do navegador (`src/api/demo/`) responde às mesmas rotas do contrato da API. Ele gera um histórico de cerca de 6 meses de vendas, caixas, compras, despesas e pedidos a partir da data atual e salva tudo no `localStorage`. Para voltar aos dados iniciais, use **Configurações → Dados → Restaurar**.
 
 ---
 
@@ -115,7 +133,13 @@ npm install
 ```bash
 cp .env.example .env.local
 ```
-Sem configurar o backend o sistema roda em **modo demonstração**: login local (`admin@nexora.com` / `admin123`) e dados salvos no navegador.
+Sem configurar o backend o sistema roda em **modo demonstração**, com dados salvos no navegador e um usuário de cada perfil (a tela de login mostra os três):
+
+| Perfil | E-mail | Senha |
+|---|---|---|
+| Administrador | `admin@nexora.com` | `admin123` |
+| Gerente | `gerente@nexora.com` | `gerente123` |
+| Operador de caixa | `operador@nexora.com` | `operador123` |
 
 4. Inicie o servidor de desenvolvimento:
 ```bash
@@ -166,7 +190,9 @@ Para conferir se o backend segue o contrato, rode os testes de contrato contra e
 CONTRATO_API_URL=http://localhost:3000 CONTRATO_EMAIL=admin@empresa.com CONTRATO_SENHA=senha npm run test:contrato
 ```
 
-Na dúvida sobre alguma regra de negócio, a implementação de referência está em `src/api/demo/dominio.js`.
+`CONTRATO_EMAIL` deve ser de um administrador. Para testar também as permissões, informe um operador em `CONTRATO_EMAIL_OPERADOR` e `CONTRATO_SENHA_OPERADOR`.
+
+Na dúvida sobre alguma regra de negócio, a implementação de referência está em `src/api/demo/dominio/` (um arquivo por módulo).
 
 Em produção (Vercel/Netlify), defina `VITE_API_URL` nas variáveis de ambiente do projeto antes do build.
 
@@ -178,11 +204,14 @@ Em produção (Vercel/Netlify), defina `VITE_API_URL` nas variáveis de ambiente
 ├── src/
 │   ├── api/            # Cliente HTTP, autenticação, hooks por recurso e testes de contrato
 │   │   └── demo/       # Servidor de demonstração (implementação de referência do contrato)
+│   │       └── dominio/ # Regras de negócio por módulo (vendas, caixa, compras, usuários, auditoria...)
 │   ├── components/     # Componentes de layout e reutilizáveis (Modal, Cupom, BuscaGlobal, KanbanPedidos...)
+│   │   └── caixa/      # Abertura, sangria/suprimento e fechamento de caixa
 │   │   └── ui/         # Componentes primitivos (Radix UI / Shadcn)
 │   ├── hooks/          # Hooks customizados (paginação, Esc para fechar, valor atrasado...)
-│   ├── lib/            # Contextos (auth, tema), datas, dinheiro, máscaras, formatação e CSV
+│   ├── lib/            # Contextos (auth, tema), permissões, datas, dinheiro, máscaras, formatação e CSV
 │   ├── pages/          # Telas completas (Dashboard, PDV, Vendas, Estoque, etc.)
+│   │   └── backoffice/ # Caixa, Compras, Fornecedores, Categorias, Usuários e Auditoria
 │   ├── App.jsx         # Roteamento central e provedores
 │   ├── index.css       # Estilos globais e tokens Tailwind
 │   └── main.jsx        # Ponto de entrada React

@@ -49,39 +49,40 @@ const mensagemDeErro = (dados, status) =>
   dados?.mensagem || dados?.message || dados?.erro || `Erro ${status} ao acessar o servidor.`;
 
 export async function api(caminho, { method = 'GET', body, autenticado = true } = {}) {
-  if (!backendConfigurado) {
-    const { responderDemo } = await import('./demo/servidor.js');
-    const { status, corpo } = await responderDemo(method, caminho, body);
-    if (status >= 400) throw new ApiError(mensagemDeErro(corpo, status), status, corpo);
-    return corpo;
-  }
-
-  const headers = { Accept: 'application/json' };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
   const token = autenticado ? tokenStorage.obter() : null;
-  if (token) headers.Authorization = `Bearer ${token}`;
+  let status;
+  let dados;
 
-  let resposta;
-  try {
-    resposta = await fetch(API_URL + caminho, {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-  } catch {
-    throw new ApiError('Não foi possível conectar ao servidor. Verifique sua conexão.', 0);
+  if (!backendConfigurado) {
+    // Modo demonstração: mesmo contrato, respondido dentro do navegador
+    const { responderDemo } = await import('./demo/servidor.js');
+    ({ status, corpo: dados } = await responderDemo(method, caminho, body, token));
+  } else {
+    const headers = { Accept: 'application/json' };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    let resposta;
+    try {
+      resposta = await fetch(API_URL + caminho, {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+    } catch {
+      throw new ApiError('Não foi possível conectar ao servidor. Verifique sua conexão.', 0);
+    }
+    status = resposta.status;
+    const texto = await resposta.text();
+    try { dados = texto ? JSON.parse(texto) : null; } catch { dados = texto; }
   }
 
-  const texto = await resposta.text();
-  let dados = null;
-  try { dados = texto ? JSON.parse(texto) : null; } catch { dados = texto; }
-
-  if (!resposta.ok) {
-    if (resposta.status === 401 && token) {
+  if (status >= 400) {
+    if (status === 401 && token) {
       tokenStorage.limpar();
       window.dispatchEvent(new Event(EVENTO_SESSAO_EXPIRADA));
     }
-    throw new ApiError(mensagemDeErro(dados, resposta.status), resposta.status, dados);
+    throw new ApiError(mensagemDeErro(dados, status), status, dados);
   }
   return dados;
 }

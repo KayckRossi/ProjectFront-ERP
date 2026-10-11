@@ -101,8 +101,11 @@ describe('modo demonstração (sem VITE_API_URL)', () => {
   it('responde pelo servidor de demonstração, sem rede', async () => {
     const fetchFalso = vi.fn();
     vi.stubGlobal('fetch', fetchFalso);
-    const { api, backendConfigurado } = await carregarHttp('');
+    const { api, backendConfigurado, tokenStorage } = await carregarHttp('');
     expect(backendConfigurado).toBe(false);
+    await expect(api('/api/categorias')).rejects.toMatchObject({ status: 401 });
+    const login = await api('/api/auth/login', { method: 'POST', body: { email: 'admin@nexora.com', password: 'admin123' }, autenticado: false });
+    tokenStorage.salvar(login.access_token);
     const categorias = await api('/api/categorias');
     expect(categorias.length).toBeGreaterThan(0);
     await expect(api('/api/produtos/nao-existe', { method: 'PUT', body: {} })).rejects.toMatchObject({ status: 404 });

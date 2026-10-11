@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence } from 'framer-motion';
-import { Store, Printer, Bell, Shield, Database, RotateCcw } from 'lucide-react';
+import { Store, Printer, Bell, Shield, Database, RotateCcw, ShoppingCart } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import DialogoConfirmacao from '@/components/DialogoConfirmacao';
 import { Carregando, ErroConsulta } from '@/components/EstadoConsulta';
@@ -180,6 +180,17 @@ export default function Configuracoes() {
           <LinhaConfiguracao label="Mensagem no rodapé" htmlFor="cfg-rodape">
             <input id="cfg-rodape" value={form.impressao.mensagemRodape ?? ''} onChange={(e) => alterar('impressao', 'mensagemRodape', e.target.value)} className={classeCampo} />
           </LinhaConfiguracao>
+        </CartaoConfiguracao>
+
+        <CartaoConfiguracao icon={ShoppingCart} title="PDV" desc="Regras do ponto de venda">
+          <LinhaConfiguracao label="Exigir caixa aberto para vender">
+            <Alternador
+              rotulo="Exigir caixa aberto para vender"
+              ativo={form.pdv?.exigirCaixaAberto !== false}
+              aoAlternar={(v) => alterar('pdv', 'exigirCaixaAberto', v)}
+            />
+          </LinhaConfiguracao>
+          <p className="text-xs text-snow/40">Com a opção ligada, cada venda entra no caixa do operador e aparece no fechamento.</p>
         </CartaoConfiguracao>
 
         <CartaoConfiguracao icon={Shield} title="Segurança" desc="Proteção de acesso">

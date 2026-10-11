@@ -9,6 +9,7 @@ import DialogoConfirmacao from '@/components/DialogoConfirmacao';
 import { EstadoConsulta } from '@/components/EstadoConsulta';
 import { useToast } from '@/components/ui/use-toast';
 import { useClientes, useExcluirCliente, useSalvarCliente } from '@/api/clientes';
+import { useAuth } from '@/lib/AuthContext';
 import { formatCurrency, initials } from '@/lib/format';
 import { EMAIL_VALIDO, mascaraDocumento, mascaraTelefone } from '@/lib/mascaras';
 import { contemTexto, somenteDigitos } from '@/lib/texto';
@@ -84,6 +85,7 @@ function ModalFormularioCliente({ cliente, onClose, onSave }) {
 
 export default function Clientes() {
   const { toast } = useToast();
+  const { pode } = useAuth();
   const [searchParams] = useSearchParams();
   const clientesQuery = useClientes();
   const salvarCliente = useSalvarCliente();
@@ -171,9 +173,11 @@ export default function Clientes() {
                       <button onClick={() => setFormulario({ cliente: c })} className="w-8 h-8 rounded-md hover:bg-verdigris-light text-snow/60 hover:text-pearl flex items-center justify-center transition-colors" aria-label={`Editar ${c.nome}`}>
                         <Pencil size={15} />
                       </button>
-                      <button onClick={() => setConfirmarExclusao(c)} className="w-8 h-8 rounded-md hover:bg-danger/15 text-snow/60 hover:text-danger flex items-center justify-center transition-colors" aria-label={`Excluir ${c.nome}`}>
-                        <Trash2 size={15} />
-                      </button>
+                      {pode('clientes.excluir') && (
+                        <button onClick={() => setConfirmarExclusao(c)} className="w-8 h-8 rounded-md hover:bg-danger/15 text-snow/60 hover:text-danger flex items-center justify-center transition-colors" aria-label={`Excluir ${c.nome}`}>
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="mt-4 pt-4 border-t border-[rgba(125,226,209,0.10)] space-y-1.5 text-sm">

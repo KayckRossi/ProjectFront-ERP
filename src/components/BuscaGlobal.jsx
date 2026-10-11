@@ -2,24 +2,32 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, LayoutDashboard, ShoppingCart, Receipt, Package, Boxes, Users, Wallet, BarChart3, Settings, Hash, User,
+  Banknote, ShoppingBasket, Truck, Tags, UserCog, ScrollText,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useProdutos } from '@/api/produtos';
 import { useClientes } from '@/api/clientes';
+import { useAuth } from '@/lib/AuthContext';
 import { formatCurrency } from '@/lib/format';
 import { contemTexto, somenteDigitos } from '@/lib/texto';
 
 const PAGINAS = [
-  { caminho: '/', rotulo: 'Dashboard', icone: LayoutDashboard },
-  { caminho: '/pdv', rotulo: 'PDV - Ponto de Venda', icone: ShoppingCart },
-  { caminho: '/vendas', rotulo: 'Vendas', icone: Receipt },
-  { caminho: '/produtos', rotulo: 'Produtos', icone: Package },
-  { caminho: '/estoque', rotulo: 'Estoque', icone: Boxes },
-  { caminho: '/clientes', rotulo: 'Clientes', icone: Users },
-  { caminho: '/financeiro', rotulo: 'Financeiro', icone: Wallet },
-  { caminho: '/relatorios', rotulo: 'Relatórios', icone: BarChart3 },
-  { caminho: '/configuracoes', rotulo: 'Configurações', icone: Settings },
+  { caminho: '/', rotulo: 'Dashboard', icone: LayoutDashboard, permissao: 'dashboard.ver' },
+  { caminho: '/pdv', rotulo: 'PDV - Ponto de Venda', icone: ShoppingCart, permissao: 'pdv.operar' },
+  { caminho: '/vendas', rotulo: 'Vendas', icone: Receipt, permissao: 'vendas.ver' },
+  { caminho: '/produtos', rotulo: 'Produtos', icone: Package, permissao: 'produtos.gerenciar' },
+  { caminho: '/estoque', rotulo: 'Estoque', icone: Boxes, permissao: 'estoque.gerenciar' },
+  { caminho: '/clientes', rotulo: 'Clientes', icone: Users, permissao: 'clientes.gerenciar' },
+  { caminho: '/financeiro', rotulo: 'Financeiro', icone: Wallet, permissao: 'financeiro.ver' },
+  { caminho: '/relatorios', rotulo: 'Relatórios', icone: BarChart3, permissao: 'relatorios.ver' },
+  { caminho: '/backoffice/caixa', rotulo: 'Caixa - abertura e fechamento', icone: Banknote, permissao: 'pdv.operar' },
+  { caminho: '/backoffice/compras', rotulo: 'Compras e entrada de mercadorias', icone: ShoppingBasket, permissao: 'compras.gerenciar' },
+  { caminho: '/backoffice/fornecedores', rotulo: 'Fornecedores', icone: Truck, permissao: 'fornecedores.gerenciar' },
+  { caminho: '/backoffice/categorias', rotulo: 'Categorias', icone: Tags, permissao: 'categorias.gerenciar' },
+  { caminho: '/backoffice/usuarios', rotulo: 'Usuários e permissões', icone: UserCog, permissao: 'usuarios.gerenciar' },
+  { caminho: '/backoffice/auditoria', rotulo: 'Auditoria', icone: ScrollText, permissao: 'auditoria.ver' },
+  { caminho: '/configuracoes', rotulo: 'Configurações', icone: Settings, permissao: 'configuracoes.gerenciar' },
 ];
 
 const LIMITE_POR_GRUPO = 6;
@@ -28,11 +36,14 @@ const classeItem = 'gap-3 cursor-pointer rounded-md text-snow data-[selected=tru
 // Paleta de busca (Ctrl+K): páginas, produtos, clientes e vendas pelo número
 export default function BuscaGlobal() {
   const navigate = useNavigate();
+  const { pode } = useAuth();
   const [aberta, setAberta] = useState(false);
   const [termo, setTermo] = useState('');
   // Os cadastros só são carregados quando a busca é aberta
-  const { data: produtos = [] } = useProdutos({ enabled: aberta });
-  const { data: clientes = [] } = useClientes({ enabled: aberta });
+  const buscaProdutos = pode('produtos.gerenciar');
+  const buscaClientes = pode('clientes.gerenciar');
+  const { data: produtos = [] } = useProdutos({ enabled: aberta && buscaProdutos });
+  const { data: clientes = [] } = useClientes({ enabled: aberta && buscaClientes });
 
   useEffect(() => {
     const aoTeclar = (e) => {
@@ -56,12 +67,12 @@ export default function BuscaGlobal() {
   };
 
   const busca = termo.trim();
-  const numeroVenda = /^#?\d+$/.test(busca) ? somenteDigitos(busca) : '';
-  const paginas = PAGINAS.filter((p) => contemTexto(p.rotulo, busca));
-  const produtosEncontrados = busca
+  const numeroVenda = pode('vendas.ver') && /^#?\d+$/.test(busca) ? somenteDigitos(busca) : '';
+  const paginas = PAGINAS.filter((p) => pode(p.permissao) && contemTexto(p.rotulo, busca));
+  const produtosEncontrados = busca && buscaProdutos
     ? produtos.filter((p) => contemTexto(p.nome, busca) || contemTexto(p.sku, busca) || p.codigoBarras === busca).slice(0, LIMITE_POR_GRUPO)
     : [];
-  const clientesEncontrados = busca
+  const clientesEncontrados = busca && buscaClientes
     ? clientes.filter((c) => contemTexto(c.nome, busca) || (somenteDigitos(busca) && somenteDigitos(c.documento).includes(somenteDigitos(busca)))).slice(0, LIMITE_POR_GRUPO)
     : [];
 

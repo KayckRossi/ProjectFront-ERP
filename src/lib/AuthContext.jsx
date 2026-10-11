@@ -3,6 +3,7 @@ import { authApi } from '@/api/auth';
 import { EVENTO_SESSAO_EXPIRADA } from '@/api/http';
 import { queryClientInstance } from '@/lib/query-client';
 import { toast } from '@/components/ui/use-toast';
+import { PERFIS, pode as perfilPode } from '@/lib/permissoes';
 
 const AuthContext = createContext();
 
@@ -46,6 +47,9 @@ export const AuthProvider = ({ children }) => {
     return () => window.removeEventListener(EVENTO_SESSAO_EXPIRADA, aoExpirar);
   }, []);
 
+  // Permissões do perfil do usuário logado (src/lib/permissoes.js); o backend aplica as mesmas regras
+  const pode = useCallback((permissao) => perfilPode(user?.role, permissao), [user]);
+
   const logout = (shouldRedirect = true) => {
     authApi.logout();
     queryClientInstance.clear();
@@ -57,6 +61,8 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user,
       isAuthenticated: Boolean(user),
+      perfil: PERFIS[user?.role] ?? '',
+      pode,
       isLoadingAuth,
       authError,
       logout,

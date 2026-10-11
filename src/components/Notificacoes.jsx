@@ -1,32 +1,39 @@
 import { useNavigate } from 'react-router-dom';
-import { Bell, PackageX, AlertTriangle, Clock, CheckCircle2 } from 'lucide-react';
+import { Bell, PackageX, AlertTriangle, Clock, CheckCircle2, ShoppingBasket } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useEstoque } from '@/api/estoque';
 import { usePedidos } from '@/api/pedidos';
 import { useConfiguracoes } from '@/api/configuracoes';
+import { useCompras } from '@/api/compras';
+import { useAuth } from '@/lib/AuthContext';
 
 const plural = (quantidade, singular, pluralTexto) => `${quantidade} ${quantidade === 1 ? singular : pluralTexto}`;
 
-// Sino do cabeçalho: alertas de estoque (se ativados nas Configurações) e pedidos pendentes
+// Sino do cabeçalho: alertas de estoque (se ativados nas Configurações), pedidos pendentes e
+// compras aguardando recebimento. Cada alerta só aparece para quem pode agir sobre ele.
 export default function Notificacoes() {
   const navigate = useNavigate();
+  const { pode } = useAuth();
   const { data: configuracoes } = useConfiguracoes();
-  const alertaEstoqueAtivo = configuracoes?.notificacoes?.alertaEstoqueBaixo ?? true;
+  const alertaEstoqueAtivo = (configuracoes?.notificacoes?.alertaEstoqueBaixo ?? true) && pode('estoque.gerenciar');
   const { data: estoque = [] } = useEstoque({ enabled: alertaEstoqueAtivo });
-  const { data: pedidos = [] } = usePedidos({ atualizarACada: 30_000 });
+  const { data: pedidos = [] } = usePedidos({ atualizarACada: 30_000, ativo: pode('pdv.operar') });
+  const { data: comprasAbertas = [] } = useCompras({ status: 'aberta' }, { enabled: pode('compras.gerenciar') });
 
   const semEstoque = alertaEstoqueAtivo ? estoque.filter((p) => p.estoque === 0).length : 0;
   const estoqueBaixo = alertaEstoqueAtivo ? estoque.filter((p) => p.estoque > 0 && p.status !== 'OK').length : 0;
   const pendentes = pedidos.filter((p) => p.status === 'pendente').length;
+  const aguardandoRecebimento = comprasAbertas.length;
 
   const alertas = [
     semEstoque > 0 && { id: 'sem-estoque', icone: PackageX, cor: 'text-danger', texto: `${plural(semEstoque, 'produto', 'produtos')} sem estoque`, destino: '/estoque?filtro=sem-estoque' },
     estoqueBaixo > 0 && { id: 'baixo', icone: AlertTriangle, cor: 'text-warning', texto: `${plural(estoqueBaixo, 'produto', 'produtos')} com estoque baixo`, destino: '/estoque?filtro=baixo' },
     pendentes > 0 && { id: 'pedidos', icone: Clock, cor: 'text-pearl', texto: `${plural(pendentes, 'pedido pendente', 'pedidos pendentes')} no Kanban`, destino: '/pdv?aba=pedidos' },
+    aguardandoRecebimento > 0 && { id: 'compras', icone: ShoppingBasket, cor: 'text-warning', texto: `${plural(aguardandoRecebimento, 'compra aguardando', 'compras aguardando')} recebimento`, destino: '/backoffice/compras?status=aberta' },
   ].filter(Boolean);
-  const total = semEstoque + estoqueBaixo + pendentes;
+  const total = semEstoque + estoqueBaixo + pendentes + aguardandoRecebimento;
 
   return (
     <DropdownMenu>

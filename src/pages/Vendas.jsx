@@ -19,6 +19,7 @@ import { useClientes } from '@/api/clientes';
 import { useConfiguracoes } from '@/api/configuracoes';
 import { formatCurrency, formatDataHora } from '@/lib/format';
 import { dataLocalISO, periodoRapido, somarDias } from '@/lib/datas';
+import { useAuth } from '@/lib/AuthContext';
 
 const POR_PAGINA = 15;
 const ROTULOS_PAGAMENTO = { dinheiro: 'Dinheiro', cartao: 'Cartão', pix: 'PIX' };
@@ -47,6 +48,7 @@ function Resumo({ rotulo, valor }) {
 
 function DetalheVenda({ id, onClose }) {
   const { toast } = useToast();
+  const { pode } = useAuth();
   const vendaQuery = useVenda(id);
   const { data: configuracoes } = useConfiguracoes();
   const cancelarVenda = useCancelarVenda();
@@ -75,11 +77,12 @@ function DetalheVenda({ id, onClose }) {
                 <div><p className="text-xs text-snow/50">Cliente</p><p className="text-snow">{venda.cliente}</p></div>
                 <div><p className="text-xs text-snow/50">Pagamento</p><p className="text-snow">{ROTULOS_PAGAMENTO[venda.formaPagamento]}</p></div>
                 <div><p className="text-xs text-snow/50">Status</p><StatusBadge status={venda.status} /></div>
+                {venda.operador && <div><p className="text-xs text-snow/50">Operador</p><p className="text-snow">{venda.operador}</p></div>}
               </div>
 
               {venda.status === 'Cancelada' && (
                 <div className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-snow/80">
-                  Cancelada em {formatDataHora(venda.canceladaEm)}
+                  Cancelada em {formatDataHora(venda.canceladaEm)}{venda.canceladaPor && <> por {venda.canceladaPor}</>}
                   {venda.motivoCancelamento && <> · Motivo: {venda.motivoCancelamento}</>}
                 </div>
               )}
@@ -125,7 +128,7 @@ function DetalheVenda({ id, onClose }) {
                 >
                   <Printer size={17} /> Cupom
                 </button>
-                {venda.status === 'Concluída' && (
+                {venda.status === 'Concluída' && pode('vendas.cancelar') && (
                   <button
                     onClick={() => { setMotivo(''); setConfirmandoCancelamento(true); }}
                     className="flex-1 h-11 rounded-lg border border-danger/40 text-danger text-sm font-medium hover:bg-danger/15 transition-colors inline-flex items-center justify-center gap-2"
@@ -284,6 +287,7 @@ export default function Vendas() {
                     <th scope="col" className="font-medium py-3 px-4">Cliente</th>
                     <th scope="col" className="font-medium py-3 px-4 text-center">Itens</th>
                     <th scope="col" className="font-medium py-3 px-4">Pagamento</th>
+                    <th scope="col" className="font-medium py-3 px-4 hidden xl:table-cell">Operador</th>
                     <th scope="col" className="font-medium py-3 px-4 text-right">Total</th>
                     <th scope="col" className="font-medium py-3 px-4">Status</th>
                     <th scope="col" className="py-3 px-4"><span className="sr-only">Detalhes</span></th>
@@ -301,6 +305,7 @@ export default function Vendas() {
                       <td className="py-3 px-4 text-snow">{v.cliente}</td>
                       <td className="py-3 px-4 text-center text-snow/70">{v.itens}</td>
                       <td className="py-3 px-4 text-snow/70">{ROTULOS_PAGAMENTO[v.formaPagamento]}</td>
+                      <td className="py-3 px-4 text-snow/70 hidden xl:table-cell">{v.operador ?? '—'}</td>
                       <td className={`py-3 px-4 text-right font-medium ${v.status === 'Cancelada' ? 'text-snow/40 line-through' : 'text-snow'}`}>{formatCurrency(v.total)}</td>
                       <td className="py-3 px-4"><StatusBadge status={v.status} /></td>
                       <td className="py-3 px-4 text-right">

@@ -1,24 +1,51 @@
 import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, ShoppingCart, Receipt, Package, Boxes,
-  Users, Wallet, BarChart3, Settings, ChevronLeft, X
+  LayoutDashboard, ShoppingCart, Receipt, Package, Boxes, Users, Wallet, BarChart3, Settings,
+  Banknote, ShoppingBasket, Truck, Tags, UserCog, ScrollText, ChevronLeft, X
 } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
 
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/pdv', label: 'PDV', icon: ShoppingCart },
-  { to: '/vendas', label: 'Vendas', icon: Receipt },
-  { to: '/produtos', label: 'Produtos', icon: Package },
-  { to: '/estoque', label: 'Estoque', icon: Boxes },
-  { to: '/clientes', label: 'Clientes', icon: Users },
-  { to: '/financeiro', label: 'Financeiro', icon: Wallet },
-  { to: '/relatorios', label: 'Relatórios', icon: BarChart3 },
-  { to: '/configuracoes', label: 'Configurações', icon: Settings },
+// Cada item só aparece para perfis com a permissão (src/lib/permissoes.js)
+const GRUPOS = [
+  {
+    titulo: 'Operação',
+    itens: [
+      { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true, permissao: 'dashboard.ver' },
+      { to: '/pdv', label: 'PDV', icon: ShoppingCart, permissao: 'pdv.operar' },
+      { to: '/vendas', label: 'Vendas', icon: Receipt, permissao: 'vendas.ver' },
+    ],
+  },
+  {
+    titulo: 'Gestão',
+    itens: [
+      { to: '/produtos', label: 'Produtos', icon: Package, permissao: 'produtos.gerenciar' },
+      { to: '/estoque', label: 'Estoque', icon: Boxes, permissao: 'estoque.gerenciar' },
+      { to: '/clientes', label: 'Clientes', icon: Users, permissao: 'clientes.gerenciar' },
+      { to: '/financeiro', label: 'Financeiro', icon: Wallet, permissao: 'financeiro.ver' },
+      { to: '/relatorios', label: 'Relatórios', icon: BarChart3, permissao: 'relatorios.ver' },
+    ],
+  },
+  {
+    titulo: 'Backoffice',
+    itens: [
+      { to: '/backoffice/caixa', label: 'Caixa', icon: Banknote, permissao: 'pdv.operar' },
+      { to: '/backoffice/compras', label: 'Compras', icon: ShoppingBasket, permissao: 'compras.gerenciar' },
+      { to: '/backoffice/fornecedores', label: 'Fornecedores', icon: Truck, permissao: 'fornecedores.gerenciar' },
+      { to: '/backoffice/categorias', label: 'Categorias', icon: Tags, permissao: 'categorias.gerenciar' },
+      { to: '/backoffice/usuarios', label: 'Usuários', icon: UserCog, permissao: 'usuarios.gerenciar' },
+      { to: '/backoffice/auditoria', label: 'Auditoria', icon: ScrollText, permissao: 'auditoria.ver' },
+      { to: '/configuracoes', label: 'Configurações', icon: Settings, permissao: 'configuracoes.gerenciar' },
+    ],
+  },
 ];
 
 export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggleCollapse }) {
   const width = collapsed ? 'w-20' : 'w-64';
+  const { pode } = useAuth();
+  const grupos = GRUPOS
+    .map((grupo) => ({ ...grupo, itens: grupo.itens.filter((item) => pode(item.permissao)) }))
+    .filter((grupo) => grupo.itens.length);
 
   const content = (
     <div className={`flex h-full flex-col bg-onyx border-r border-[rgba(125,226,209,0.10)] transition-all duration-300 ${width}`}>
@@ -43,46 +70,55 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              aria-label={item.label}
-              title={item.label}
-              onClick={onCloseMobile}
-              className={({ isActive }) =>
-                `relative flex items-center py-2.5 rounded-lg transition-all duration-200 group ${
-                  collapsed
-                    ? 'justify-center px-0'
-                    : isActive
-                      ? 'pl-4 pr-3 gap-3'
-                      : 'px-3 gap-3'
-                } ${
-                  isActive
-                    ? 'text-pearl bg-verdigris-light font-medium'
-                    : 'text-snow/70 hover:text-snow hover:bg-graphite-hover'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {isActive && (
-                    <motion.span
-                      layoutId="active-bar"
-                      className={`absolute ${collapsed ? 'left-1' : 'left-1.5'} top-1/2 -translate-y-1/2 h-5 w-1 rounded-full bg-verdigris shadow-[0_0_8px_rgba(51,153,137,0.6)]`}
-                    />
-                  )}
-                  <Icon size={20} className="shrink-0 transition-transform group-hover:scale-105" />
-                  {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
-                </>
-              )}
-            </NavLink>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1" aria-label="Menu principal">
+        {grupos.map((grupo, indiceGrupo) => (
+          <div key={grupo.titulo} className={indiceGrupo ? 'pt-3' : ''}>
+            {collapsed
+              ? indiceGrupo > 0 && <div className="mx-3 mb-3 border-t border-[rgba(125,226,209,0.10)]" />
+              : <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-snow/35">{grupo.titulo}</p>}
+            <div className="space-y-1">
+              {grupo.itens.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    aria-label={item.label}
+                    title={item.label}
+                    onClick={onCloseMobile}
+                    className={({ isActive }) =>
+                      `relative flex items-center py-2.5 rounded-lg transition-all duration-200 group ${
+                        collapsed
+                          ? 'justify-center px-0'
+                          : isActive
+                            ? 'pl-4 pr-3 gap-3'
+                            : 'px-3 gap-3'
+                      } ${
+                        isActive
+                          ? 'text-pearl bg-verdigris-light font-medium'
+                          : 'text-snow/70 hover:text-snow hover:bg-graphite-hover'
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <motion.span
+                            layoutId="active-bar"
+                            className={`absolute ${collapsed ? 'left-1' : 'left-1.5'} top-1/2 -translate-y-1/2 h-5 w-1 rounded-full bg-verdigris shadow-[0_0_8px_rgba(51,153,137,0.6)]`}
+                          />
+                        )}
+                        <Icon size={20} className="shrink-0 transition-transform group-hover:scale-105" />
+                        {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
+                      </>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Collapse toggle (desktop) */}
