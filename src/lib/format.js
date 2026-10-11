@@ -4,5 +4,6 @@ export {
   parseDate,
   formatDate,
   formatDateTime,
+  formatDataHora,
   initials,
 } from './utils';

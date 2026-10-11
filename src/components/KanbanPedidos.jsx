@@ -1,7 +1,9 @@
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { motion } from 'framer-motion';
 import { Clock, ChefHat, CheckCircle2, Package } from 'lucide-react';
-import { useErpData } from '@/lib/ErpDataContext';
+import { Carregando, ErroConsulta } from '@/components/EstadoConsulta';
+import { useToast } from '@/components/ui/use-toast';
+import { useAtualizarStatusPedido, usePedidos } from '@/api/pedidos';
 import { formatCurrency, formatDateTime, initials } from '@/lib/format';
 
 const COLUNAS = [
@@ -11,7 +13,16 @@ const COLUNAS = [
 ];
 
 export default function KanbanPedidos() {
-  const { pedidos, moverPedido } = useErpData();
+  const { toast } = useToast();
+  const pedidosQuery = usePedidos();
+  const atualizarStatus = useAtualizarStatusPedido();
+  const pedidos = pedidosQuery.data ?? [];
+
+  const moverPedido = (id, status) => {
+    atualizarStatus.mutate({ id, status }, {
+      onError: (erro) => toast({ title: 'Não foi possível mover o pedido', description: erro.message, variant: 'destructive' }),
+    });
+  };
 
   const onDragEnd = (result) => {
     const { destination, source, draggableId } = result;
@@ -25,6 +36,9 @@ export default function KanbanPedidos() {
     if (next < 0 || next >= COLUNAS.length) return;
     moverPedido(id, COLUNAS[next].id);
   };
+
+  if (pedidosQuery.isPending) return <Carregando texto="Carregando pedidos..." />;
+  if (pedidosQuery.isError) return <ErroConsulta erro={pedidosQuery.error} onTentarNovamente={pedidosQuery.refetch} />;
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
@@ -52,10 +66,7 @@ export default function KanbanPedidos() {
                   >
                     {itens.map((o, idx) => {
                       const colIdx = COLUNAS.findIndex(c => c.id === col.id);
-                      const nomeCliente = o.cliente || o.customer;
-                      const qtdItens = o.itens ?? o.items;
-                      const formaPagamento = o.pagamento || o.payment;
-                      const dataPedido = o.data || o.date;
+                      const { cliente: nomeCliente, itens: qtdItens, pagamento: formaPagamento, data: dataPedido } = o;
 
                       return (
                         <Draggable key={o.id} draggableId={o.id} index={idx}>
