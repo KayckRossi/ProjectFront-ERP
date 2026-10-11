@@ -31,5 +31,11 @@ export const formatDateTime = (date) => {
   return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(d);
 };
 
+// "10/10/2026 15:25"
+export const formatDataHora = (date) => {
+  const d = parseDate(date);
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d).replace(',', '');
+};
+
 export const initials = (name = '') =>
   name.split(' ').filter(Boolean).slice(0, 2).map(p => p[0]?.toUpperCase()).join('');

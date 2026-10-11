@@ -1,8 +1,16 @@
 // Cliente HTTP do backend próprio (ver CONTRATO_API_BACKEND.md).
-// Sem VITE_API_URL o app roda em modo demonstração, sem chamadas de rede.
-const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+//
+// VITE_API_URL:
+//   - URL completa (ex.: http://localhost:3000): chamadas vão direto para o backend
+//   - "/": mesma origem do front (proxy do Vite em desenvolvimento ou backend servindo o front)
+//   - vazia: modo demonstração, respondido pelo servidor em src/api/demo/ dentro do navegador
+const URL_CONFIGURADA = (import.meta.env.VITE_API_URL || '').trim();
+const API_URL = URL_CONFIGURADA.replace(/\/+$/, '');
 
-export const backendConfigurado = Boolean(API_URL);
+export const backendConfigurado = URL_CONFIGURADA !== '';
+
+// Disparado quando o backend recusa o token (401) durante o uso do sistema
+export const EVENTO_SESSAO_EXPIRADA = 'nexora:sessao-expirada';
 
 const CHAVE_TOKEN = 'nexora_token';
 
@@ -27,14 +35,30 @@ export class ApiError extends Error {
   }
 }
 
+// Monta "/api/vendas?dataInicio=...&status=..." ignorando parâmetros vazios
+export function comParametros(caminho, parametros = {}) {
+  const busca = new URLSearchParams();
+  for (const [chave, valor] of Object.entries(parametros)) {
+    if (valor !== undefined && valor !== null && valor !== '') busca.set(chave, valor);
+  }
+  const consulta = busca.toString();
+  return consulta ? `${caminho}?${consulta}` : caminho;
+}
+
+const mensagemDeErro = (dados, status) =>
+  dados?.mensagem || dados?.message || dados?.erro || `Erro ${status} ao acessar o servidor.`;
+
 export async function api(caminho, { method = 'GET', body, autenticado = true } = {}) {
   if (!backendConfigurado) {
-    throw new ApiError('Backend não configurado (defina VITE_API_URL).', 0);
+    const { responderDemo } = await import('./demo/servidor.js');
+    const { status, corpo } = await responderDemo(method, caminho, body);
+    if (status >= 400) throw new ApiError(mensagemDeErro(corpo, status), status, corpo);
+    return corpo;
   }
 
   const headers = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  const token = autenticado && tokenStorage.obter();
+  const token = autenticado ? tokenStorage.obter() : null;
   if (token) headers.Authorization = `Bearer ${token}`;
 
   let resposta;
@@ -53,8 +77,11 @@ export async function api(caminho, { method = 'GET', body, autenticado = true } 
   try { dados = texto ? JSON.parse(texto) : null; } catch { dados = texto; }
 
   if (!resposta.ok) {
-    const mensagem = dados?.mensagem || dados?.message || dados?.erro || `Erro ${resposta.status} ao acessar o servidor.`;
-    throw new ApiError(mensagem, resposta.status, dados);
+    if (resposta.status === 401 && token) {
+      tokenStorage.limpar();
+      window.dispatchEvent(new Event(EVENTO_SESSAO_EXPIRADA));
+    }
+    throw new ApiError(mensagemDeErro(dados, resposta.status), resposta.status, dados);
   }
   return dados;
 }
