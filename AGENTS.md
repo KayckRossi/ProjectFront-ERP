@@ -9,14 +9,16 @@ Start with `README.md` for local setup and environment variables.
 ## Key Files
 
 - `src/`: frontend application source.
-- `src/api/http.js`: cliente HTTP do backend próprio (`VITE_API_URL`, token Bearer).
-- `src/api/auth.js`: autenticação; sem `VITE_API_URL` usa o modo demonstração local.
-- `src/lib/ErpDataContext.jsx`: dados compartilhados entre as telas (hoje persistidos no localStorage).
 - `CONTRATO_API_BACKEND.md`: contrato REST que o backend deve implementar.
+- `src/api/http.js`: cliente HTTP (`VITE_API_URL`, token Bearer, aviso de sessão expirada). Sem `VITE_API_URL`, encaminha as chamadas para o servidor de demonstração.
+- `src/api/*.js`: hooks do TanStack Query por recurso (produtos, vendas, financeiro...). As telas não chamam `fetch` diretamente.
+- `src/api/demo/`: servidor de demonstração; `dominio.js` é a implementação de referência das regras do contrato e `seed.js` gera os dados de exemplo.
+- `src/api/contrato.test.js`: testes do contrato (rodam contra o servidor de demonstração ou contra o backend real).
 - `.env.local`: local-only environment values; never commit secrets.
 
 ## Working Notes
 
 - `npm run dev` inicia o front-end; sem backend configurado o app roda em modo demonstração.
-- Novas chamadas ao backend devem passar por `src/api/http.js` e seguir o contrato.
-- Run `npm run lint` and `npm run build` before finishing code changes.
+- Ao mudar o contrato da API, atualize juntos `CONTRATO_API_BACKEND.md`, `src/api/demo/dominio.js` e `src/api/contrato.test.js`.
+- `src/lib/datas.js`, `dinheiro.js`, `texto.js`, `mascaras.js` e `estoque.js` usam só imports relativos, porque também rodam no servidor de demonstração e nos testes em Node.
+- Run `npm run lint`, `npm test` and `npm run build` before finishing code changes (o CI roda os mesmos passos).
