@@ -1,147 +1,162 @@
-import { useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import EmptyState from '@/components/EmptyState';
-import { useErpData } from '@/lib/ErpDataContext';
-import { categorias } from '@/lib/mockData';
+import Modal from '@/components/Modal';
+import DialogoConfirmacao from '@/components/DialogoConfirmacao';
+import Paginacao from '@/components/Paginacao';
+import { EstadoConsulta } from '@/components/EstadoConsulta';
+import { useToast } from '@/components/ui/use-toast';
+import { usePaginacao } from '@/hooks/usePaginacao';
+import { useCategorias, useExcluirProduto, useProdutos, useSalvarProduto } from '@/api/produtos';
 import { formatCurrency } from '@/lib/format';
+import { lerValorMonetario } from '@/lib/dinheiro';
+import { contemTexto } from '@/lib/texto';
 
-const nomeCategoria = (id) => categorias.find(c => c.id === id)?.nome || '—';
+const POR_PAGINA = 8;
 
-function ModalFormularioProduto({ open, onClose, onSave, editing }) {
+const classeCampo = 'w-full h-10 bg-onyx text-snow rounded-lg px-3 border border-transparent focus:border-verdigris focus:outline-none text-sm';
+
+function ModalFormularioProduto({ produto, categorias, onClose, onSave }) {
   const [erro, setErro] = useState('');
-  const [form, setForm] = useState(
-    editing ? {
-      nome: editing.nome || '',
-      sku: editing.sku || '',
-      categoria: editing.categoria || 'bebidas',
-      custo: editing.custo ?? 0,
-      preco: editing.preco ?? 0,
-      estoque: editing.estoque ?? 0,
-      estoqueMinimo: editing.estoqueMinimo ?? 0,
-    } : {
-      nome: '',
-      sku: '',
-      categoria: 'bebidas',
-      custo: 0,
-      preco: 0,
-      estoque: 0,
-      estoqueMinimo: 0,
-    }
-  );
+  const [salvando, setSalvando] = useState(false);
+  // Campos numéricos ficam como texto enquanto o usuário digita e são convertidos ao salvar
+  const [form, setForm] = useState({
+    nome: produto?.nome ?? '',
+    sku: produto?.sku ?? '',
+    codigoBarras: produto?.codigoBarras ?? '',
+    categoria: produto?.categoria ?? categorias[0]?.id ?? '',
+    custo: produto ? String(produto.custo).replace('.', ',') : '',
+    preco: produto ? String(produto.preco).replace('.', ',') : '',
+    estoque: String(produto?.estoque ?? 0),
+    estoqueMinimo: String(produto?.estoqueMinimo ?? 0),
+  });
 
-  const margem = form.preco && form.custo ? (((form.preco - form.custo) / form.preco) * 100).toFixed(1) : '0.0';
+  const custo = lerValorMonetario(form.custo);
+  const preco = lerValorMonetario(form.preco);
+  const margem = preco > 0 ? (((preco - custo) / preco) * 100).toFixed(1) : '0.0';
 
-  if (!open) return null;
-
-  const submit = (e) => {
-    e.preventDefault();
-    if (!form.nome.trim()) return setErro('Informe o nome do produto.');
-    if (form.preco <= 0) return setErro('O preço de venda deve ser maior que zero.');
-    if (form.preco < form.custo) return setErro('O preço de venda está abaixo do custo.');
-    if (form.estoque < 0 || form.estoqueMinimo < 0) return setErro('Estoque não pode ser negativo.');
-    onSave({ ...form, nome: form.nome.trim(), sku: form.sku.trim().toUpperCase() });
+  const alterar = (campo, valor) => {
+    setErro('');
+    setForm((atual) => ({ ...atual, [campo]: valor }));
   };
 
-  const campo = (label, name, type = 'text', opts = {}) => (
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.nome.trim()) return setErro('Informe o nome do produto.');
+    if (preco <= 0) return setErro('O preço de venda deve ser maior que zero.');
+    if (preco < custo) return setErro('O preço de venda está abaixo do custo.');
+    setSalvando(true);
+    try {
+      await onSave({
+        nome: form.nome.trim(),
+        sku: form.sku.trim().toUpperCase(),
+        categoria: form.categoria,
+        custo,
+        preco,
+        estoque: parseInt(form.estoque, 10) || 0,
+        estoqueMinimo: parseInt(form.estoqueMinimo, 10) || 0,
+        // Sem código de barras o backend gera um automaticamente
+        ...(form.codigoBarras.trim() && { codigoBarras: form.codigoBarras.trim() }),
+      });
+    } catch (erroApi) {
+      setErro(erroApi.message);
+      setSalvando(false);
+    }
+  };
+
+  const campo = (rotulo, nome, props = {}) => (
     <div>
-      <label className="text-xs text-snow/60 mb-1.5 block">{label}</label>
-      <input
-        type={type}
-        value={form[name]}
-        onChange={(e) => { setErro(''); setForm({ ...form, [name]: type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }); }}
-        className="w-full h-10 bg-onyx text-snow rounded-lg px-3 border border-transparent focus:border-verdigris focus:outline-none text-sm"
-        {...opts}
-      />
+      <label htmlFor={`produto-${nome}`} className="text-xs text-snow/60 mb-1.5 block">{rotulo}</label>
+      <input id={`produto-${nome}`} value={form[nome]} onChange={(e) => alterar(nome, e.target.value)} className={classeCampo} {...props} />
     </div>
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative bg-graphite rounded-modal p-6 w-full max-w-lg card-shadow max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-semibold text-snow">{editing ? 'Editar Produto' : 'Novo Produto'}</h2>
-          <button onClick={onClose} className="text-snow/50 hover:text-snow" aria-label="Fechar"><X size={20} /></button>
+    <Modal titulo={produto ? 'Editar Produto' : 'Novo Produto'} onClose={onClose} largura="max-w-lg">
+      <form onSubmit={submit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          {campo('Nome', 'nome', { autoFocus: true })}
+          {campo('SKU', 'sku')}
+          <div>
+            <label htmlFor="produto-categoria" className="text-xs text-snow/60 mb-1.5 block">Categoria</label>
+            <select id="produto-categoria" value={form.categoria} onChange={(e) => alterar('categoria', e.target.value)} className={classeCampo}>
+              {categorias.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </select>
+          </div>
+          {campo('Código de barras', 'codigoBarras', { inputMode: 'numeric', placeholder: 'Gerado se vazio', className: `${classeCampo} font-mono` })}
+          {campo('Estoque atual', 'estoque', { type: 'number', min: 0, step: 1 })}
+          {campo('Estoque mínimo', 'estoqueMinimo', { type: 'number', min: 0, step: 1 })}
+          {campo('Preço de custo (R$)', 'custo', { inputMode: 'decimal', placeholder: '0,00' })}
+          {campo('Preço de venda (R$)', 'preco', { inputMode: 'decimal', placeholder: '0,00' })}
         </div>
-        <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            {campo('Nome', 'nome')}
-            {campo('SKU', 'sku')}
-            <div>
-              <label className="text-xs text-snow/60 mb-1.5 block">Categoria</label>
-              <select
-                value={form.categoria}
-                onChange={(e) => setForm({ ...form, categoria: e.target.value })}
-                className="w-full h-10 bg-onyx text-snow rounded-lg px-3 border border-transparent focus:border-verdigris focus:outline-none text-sm"
-              >
-                {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-              </select>
-            </div>
-            <div />
-            {campo('Estoque atual', 'estoque', 'number', { min: 0 })}
-            {campo('Estoque mínimo', 'estoqueMinimo', 'number', { min: 0 })}
-            {campo('Preço de custo (R$)', 'custo', 'number', { step: '0.01' })}
-            {campo('Preço de venda (R$)', 'preco', 'number', { step: '0.01' })}
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-snow/60">Margem calculada:</span>
-            <span className="text-pearl font-medium">{margem}%</span>
-          </div>
-          {erro && <p role="alert" className="text-sm text-danger">{erro}</p>}
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 h-11 rounded-lg border border-snow/15 text-snow/70 hover:bg-graphite-hover transition-colors text-sm font-medium">Cancelar</button>
-            <button type="submit" className="flex-1 h-11 rounded-lg bg-verdigris text-snow hover:bg-verdigris-hover transition-colors text-sm font-semibold">Salvar</button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-snow/60">Margem calculada:</span>
+          <span className="text-pearl font-medium">{margem}%</span>
+        </div>
+        {erro && <p role="alert" className="text-sm text-danger">{erro}</p>}
+        <div className="flex gap-3 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 h-11 rounded-lg border border-snow/15 text-snow/70 hover:bg-graphite-hover transition-colors text-sm font-medium">Cancelar</button>
+          <button type="submit" disabled={salvando} className="flex-1 h-11 rounded-lg bg-verdigris text-snow hover:bg-verdigris-hover transition-colors text-sm font-semibold disabled:opacity-50">
+            {salvando ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
 export default function Produtos() {
-  const { produtos: itens, salvarProduto, excluirProduto } = useErpData();
-  const [busca, setBusca] = useState('');
+  const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const produtosQuery = useProdutos();
+  const { data: categorias = [] } = useCategorias();
+  const salvarProduto = useSalvarProduto();
+  const excluirProduto = useExcluirProduto();
+
+  const [busca, setBusca] = useState(() => searchParams.get('busca') ?? '');
   const [filtroCategoria, setFiltroCategoria] = useState('all');
-  const [pagina, setPagina] = useState(1);
-  const [modalAberto, setModalAberto] = useState(false);
-  const [editando, setEditando] = useState(null);
+  const [formulario, setFormulario] = useState(null); // { produto } aberto; produto null = novo
   const [confirmarExclusao, setConfirmarExclusao] = useState(null);
-  const porPagina = 6;
 
-  const filtrados = useMemo(() => {
-    const termo = busca.toLowerCase();
-    return itens.filter(p =>
-      (filtroCategoria === 'all' || p.categoria === filtroCategoria) &&
-      (p.nome.toLowerCase().includes(termo) || (p.sku || '').toLowerCase().includes(termo))
-    );
-  }, [itens, busca, filtroCategoria]);
-
-  // Volta para a primeira página quando a busca/filtro muda
-  useEffect(() => { setPagina(1); }, [busca, filtroCategoria]);
-
-  const totalPaginas = Math.ceil(filtrados.length / porPagina);
-
-  // Ajusta a página atual se uma exclusão reduzir o total de páginas
+  // A busca global do cabeçalho navega para /produtos?busca=...
   useEffect(() => {
-    if (totalPaginas > 0 && pagina > totalPaginas) setPagina(totalPaginas);
-  }, [pagina, totalPaginas]);
+    const buscaDaUrl = searchParams.get('busca');
+    if (buscaDaUrl !== null) setBusca(buscaDaUrl);
+  }, [searchParams]);
 
-  const itensPagina = filtrados.slice((pagina - 1) * porPagina, pagina * porPagina);
+  const filtrados = useMemo(() => (produtosQuery.data ?? []).filter((p) =>
+    (filtroCategoria === 'all' || p.categoria === filtroCategoria) &&
+    (contemTexto(p.nome, busca) || contemTexto(p.sku, busca) || p.codigoBarras === busca.trim())
+  ), [produtosQuery.data, busca, filtroCategoria]);
 
-  const abrirNovo = () => { setEditando(null); setModalAberto(true); };
-  const abrirEdicao = (p) => { setEditando(p); setModalAberto(true); };
-  const salvar = (form) => {
-    salvarProduto(editando ? { ...form, id: editando.id } : form);
-    setModalAberto(false);
+  const { pagina, setPagina, totalPaginas, itensPagina } = usePaginacao(filtrados, POR_PAGINA, `${busca}|${filtroCategoria}`);
+  const nomeCategoria = (id) => categorias.find((c) => c.id === id)?.nome ?? '—';
+
+  const salvar = async (dados) => {
+    const editando = formulario.produto;
+    await salvarProduto.mutateAsync(editando ? { ...dados, id: editando.id } : dados);
+    toast({ title: editando ? 'Produto atualizado' : 'Produto cadastrado', description: dados.nome });
+    setFormulario(null);
   };
-  const excluir = (id) => { excluirProduto(id); setConfirmarExclusao(null); };
+
+  const excluir = () => {
+    const produto = confirmarExclusao;
+    excluirProduto.mutate(produto.id, {
+      onSuccess: () => {
+        toast({ title: 'Produto excluído', description: produto.nome });
+        setConfirmarExclusao(null);
+      },
+      onError: (erro) => toast({ title: 'Não foi possível excluir', description: erro.message, variant: 'destructive' }),
+    });
+  };
 
   return (
     <div>
       <PageHeader title="Produtos" subtitle="Cadastre e gerencie seu catálogo">
-        <button onClick={abrirNovo} className="h-10 px-4 rounded-lg bg-verdigris text-snow text-sm font-semibold hover:bg-verdigris-hover transition-colors flex items-center gap-2">
+        <button onClick={() => setFormulario({ produto: null })} className="h-10 px-4 rounded-lg bg-verdigris text-snow text-sm font-semibold hover:bg-verdigris-hover transition-colors flex items-center gap-2">
           <Plus size={18} /> Novo Produto
         </button>
       </PageHeader>
@@ -150,91 +165,102 @@ export default function Produtos() {
         <div className="p-4 flex flex-col sm:flex-row gap-3 border-b border-[rgba(125,226,209,0.10)]">
           <div className="relative flex-1">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-snow/40" />
-            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome ou SKU..."
-              className="w-full h-10 bg-onyx text-snow placeholder:text-snow/40 rounded-lg pl-10 pr-4 border border-transparent focus:border-verdigris focus:outline-none text-sm" />
+            <input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por nome, SKU ou código de barras..."
+              aria-label="Buscar produtos"
+              className="w-full h-10 bg-onyx text-snow placeholder:text-snow/40 rounded-lg pl-10 pr-4 border border-transparent focus:border-verdigris focus:outline-none text-sm"
+            />
           </div>
-          <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)}
-            className="h-10 bg-onyx text-snow rounded-lg px-3 border border-transparent focus:border-verdigris focus:outline-none text-sm">
+          <select
+            value={filtroCategoria}
+            onChange={(e) => setFiltroCategoria(e.target.value)}
+            aria-label="Filtrar por categoria"
+            className="h-10 bg-onyx text-snow rounded-lg px-3 border border-transparent focus:border-verdigris focus:outline-none text-sm"
+          >
             <option value="all">Todas categorias</option>
-            {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            {categorias.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
         </div>
 
-        {itensPagina.length === 0 ? <EmptyState message="Nenhum produto corresponde à busca" /> : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-snow/50 border-b border-[rgba(125,226,209,0.10)]">
-                  <th className="font-medium py-3 px-4">Produto</th>
-                  <th className="font-medium py-3 px-4">SKU</th>
-                  <th className="font-medium py-3 px-4">Categoria</th>
-                  <th className="font-medium py-3 px-4">Custo</th>
-                  <th className="font-medium py-3 px-4">Venda</th>
-                  <th className="font-medium py-3 px-4">Margem</th>
-                  <th className="font-medium py-3 px-4">Estoque</th>
-                  <th className="font-medium py-3 px-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {itensPagina.map(p => {
-                  const { nome, custo = 0, preco = 0, estoque = 0 } = p;
-                  const margem = preco ? (((preco - custo) / preco) * 100).toFixed(0) : '0';
-
-                  return (
-                    <tr key={p.id} className="border-b border-[rgba(125,226,209,0.06)] hover:bg-graphite-hover transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg gradient-pearl flex items-center justify-center text-pearl font-semibold shrink-0">{nome[0]}</div>
-                          <span className="text-snow font-medium">{nome}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 font-mono text-snow/70">{p.sku}</td>
-                      <td className="py-3 px-4 text-snow/70">{nomeCategoria(p.categoria)}</td>
-                      <td className="py-3 px-4 text-snow/70">{formatCurrency(custo)}</td>
-                      <td className="py-3 px-4 text-snow font-medium">{formatCurrency(preco)}</td>
-                      <td className="py-3 px-4 text-pearl">{margem}%</td>
-                      <td className="py-3 px-4 text-snow/70">{estoque}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => abrirEdicao(p)} className="w-8 h-8 rounded-md hover:bg-verdigris-light text-snow/60 hover:text-pearl flex items-center justify-center transition-colors" aria-label={`Editar ${nome}`}><Pencil size={15} /></button>
-                          <button onClick={() => setConfirmarExclusao(p)} className="w-8 h-8 rounded-md hover:bg-danger/15 text-snow/60 hover:text-danger flex items-center justify-center transition-colors" aria-label={`Excluir ${nome}`}><Trash2 size={15} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {totalPaginas > 1 && (
-          <div className="flex items-center justify-between p-4 border-t border-[rgba(125,226,209,0.10)] text-sm">
-            <span className="text-snow/50">Página {pagina} de {totalPaginas}</span>
-            <div className="flex gap-2">
-              <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1} className="px-3 h-8 rounded-md bg-onyx text-snow/70 disabled:opacity-40 hover:text-pearl transition-colors">Anterior</button>
-              <button onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas} className="px-3 h-8 rounded-md bg-onyx text-snow/70 disabled:opacity-40 hover:text-pearl transition-colors">Próxima</button>
+        <EstadoConsulta consulta={produtosQuery} textoCarregando="Carregando produtos...">
+          {itensPagina.length === 0 ? <EmptyState message="Nenhum produto corresponde à busca" /> : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-snow/50 border-b border-[rgba(125,226,209,0.10)]">
+                    <th scope="col" className="font-medium py-3 px-4">Produto</th>
+                    <th scope="col" className="font-medium py-3 px-4">SKU</th>
+                    <th scope="col" className="font-medium py-3 px-4">Categoria</th>
+                    <th scope="col" className="font-medium py-3 px-4">Custo</th>
+                    <th scope="col" className="font-medium py-3 px-4">Venda</th>
+                    <th scope="col" className="font-medium py-3 px-4">Margem</th>
+                    <th scope="col" className="font-medium py-3 px-4">Estoque</th>
+                    <th scope="col" className="font-medium py-3 px-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {itensPagina.map((p) => {
+                    const margem = p.preco ? (((p.preco - p.custo) / p.preco) * 100).toFixed(0) : '0';
+                    const corEstoque = p.estoque === 0 ? 'text-danger' : p.estoque < p.estoqueMinimo ? 'text-warning' : 'text-snow/70';
+                    return (
+                      <tr key={p.id} className="border-b border-[rgba(125,226,209,0.06)] hover:bg-graphite-hover transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg gradient-pearl flex items-center justify-center text-pearl font-semibold shrink-0">{p.nome[0]}</div>
+                            <span className="text-snow font-medium">{p.nome}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <p className="font-mono text-snow/70">{p.sku || '—'}</p>
+                          {p.codigoBarras && <p className="font-mono text-[11px] text-snow/40">{p.codigoBarras}</p>}
+                        </td>
+                        <td className="py-3 px-4 text-snow/70">{nomeCategoria(p.categoria)}</td>
+                        <td className="py-3 px-4 text-snow/70">{formatCurrency(p.custo)}</td>
+                        <td className="py-3 px-4 text-snow font-medium">{formatCurrency(p.preco)}</td>
+                        <td className="py-3 px-4 text-pearl">{margem}%</td>
+                        <td className={`py-3 px-4 font-medium ${corEstoque}`}>{p.estoque}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => setFormulario({ produto: p })} className="w-8 h-8 rounded-md hover:bg-verdigris-light text-snow/60 hover:text-pearl flex items-center justify-center transition-colors" aria-label={`Editar ${p.nome}`}><Pencil size={15} /></button>
+                            <button onClick={() => setConfirmarExclusao(p)} className="w-8 h-8 rounded-md hover:bg-danger/15 text-snow/60 hover:text-danger flex items-center justify-center transition-colors" aria-label={`Excluir ${p.nome}`}><Trash2 size={15} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </div>
-        )}
+          )}
+          <Paginacao pagina={pagina} totalPaginas={totalPaginas} onMudar={setPagina} totalItens={filtrados.length} rotulo="produtos" />
+        </EstadoConsulta>
       </div>
 
-      <ModalFormularioProduto key={modalAberto ? (editando?.id ?? 'novo') : 'fechado'} open={modalAberto} onClose={() => setModalAberto(false)} onSave={salvar} editing={editando} />
+      {/* mode="wait": ao trocar de registro, o formulário anterior sai antes do próximo abrir */}
+      <AnimatePresence mode="wait">
+        {formulario && (
+          <ModalFormularioProduto
+            key={formulario.produto?.id ?? 'novo'}
+            produto={formulario.produto}
+            categorias={categorias}
+            onClose={() => setFormulario(null)}
+            onSave={salvar}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {confirmarExclusao && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60" onClick={() => setConfirmarExclusao(null)} />
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative bg-graphite rounded-modal p-6 w-full max-w-sm card-shadow text-center">
-              <div className="w-12 h-12 rounded-full bg-danger/15 flex items-center justify-center mx-auto mb-4"><Trash2 size={22} className="text-danger" /></div>
-              <h3 className="text-snow font-semibold mb-1">Excluir produto?</h3>
-              <p className="text-sm text-snow/50 mb-5"><strong className="text-snow/80">{confirmarExclusao.nome}</strong> será removido. Esta ação não pode ser desfeita.</p>
-              <div className="flex gap-3">
-                <button onClick={() => setConfirmarExclusao(null)} className="flex-1 h-10 rounded-lg border border-snow/15 text-snow/70 hover:bg-graphite-hover transition-colors text-sm">Cancelar</button>
-                <button onClick={() => excluir(confirmarExclusao.id)} className="flex-1 h-10 rounded-lg bg-danger text-snow hover:opacity-90 transition-opacity text-sm font-medium">Excluir</button>
-              </div>
-            </motion.div>
-          </div>
+          <DialogoConfirmacao
+            titulo="Excluir produto?"
+            processando={excluirProduto.isPending}
+            onConfirmar={excluir}
+            onCancelar={() => setConfirmarExclusao(null)}
+          >
+            <strong className="text-snow/80">{confirmarExclusao.nome}</strong> será removido do catálogo. As vendas já feitas continuam no histórico.
+          </DialogoConfirmacao>
         )}
       </AnimatePresence>
     </div>

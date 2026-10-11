@@ -1,12 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Bell, Menu, Sun, Moon, ChevronDown, User, LogOut } from 'lucide-react';
+import { Menu, Sun, Moon, ChevronDown, User, LogOut } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/AuthContext';
 import { useTheme } from '@/lib/ThemeContext';
+import { backendConfigurado } from '@/api/http';
+import BuscaGlobal from '@/components/BuscaGlobal';
+import Notificacoes from '@/components/Notificacoes';
 
 export default function Header({ onMenuClick }) {
   const { isDark, toggleTheme } = useTheme();
@@ -25,18 +28,18 @@ export default function Header({ onMenuClick }) {
         <Menu size={22} />
       </button>
 
-      {/* Search */}
-      <div className="relative flex-1 max-w-xl">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-snow/40" />
-        <input
-          type="text"
-          placeholder="Buscar produtos, clientes, vendas..."
-          aria-label="Buscar"
-          className="w-full h-10 bg-onyx text-snow placeholder:text-snow/40 rounded-lg pl-10 pr-4 border border-snow/10 focus:border-verdigris focus:outline-none transition-colors text-sm"
-        />
-      </div>
+      <BuscaGlobal />
 
       <div className="flex items-center gap-1 md:gap-2 ml-auto">
+        {!backendConfigurado && (
+          <span
+            title="Os dados ficam salvos neste navegador. Defina VITE_API_URL para usar o backend."
+            className="hidden lg:inline-flex items-center h-7 px-2.5 rounded-full text-[11px] font-medium bg-warning/15 text-warning border border-warning/30"
+          >
+            Modo demonstração
+          </span>
+        )}
+
         {/* Dark / Light mode toggle */}
         <button
           onClick={toggleTheme}
@@ -62,15 +65,7 @@ export default function Header({ onMenuClick }) {
           </AnimatePresence>
         </button>
 
-        {/* Notifications */}
-        <button
-          className="relative w-9 h-9 flex items-center justify-center rounded-lg text-snow/70 hover:text-pearl hover:bg-graphite-hover transition-colors"
-          aria-label="Notificações"
-        >
-          <Bell size={18} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-verdigris ring-2 ring-graphite" />
-          <span className="sr-only">Novas notificações não lidas</span>
-        </button>
+        <Notificacoes />
 
         {/* User */}
         <DropdownMenu>

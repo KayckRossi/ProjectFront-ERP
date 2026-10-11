@@ -127,6 +127,15 @@
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Impressão do cupom (src/components/Cupom.jsx): com um cupom aberto, imprime só ele */
+.area-impressao { display: none; }
+
+@media print {
+  body:has(> .area-impressao) > *:not(.area-impressao) { display: none !important; }
+  body:has(> .area-impressao) { background: #fff !important; }
+  .area-impressao { display: block !important; color: #000; background: #fff; }
+}
+
 @layer utilities {
   .card-shadow { box-shadow: var(--card-shadow); }
   .text-balance { text-wrap: balance; }

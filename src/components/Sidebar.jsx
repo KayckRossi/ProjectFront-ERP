@@ -1,13 +1,14 @@
 import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, ShoppingCart, Package, Boxes,
+  LayoutDashboard, ShoppingCart, Receipt, Package, Boxes,
   Users, Wallet, BarChart3, Settings, ChevronLeft, X
 } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/pdv', label: 'Vendas / PDV', icon: ShoppingCart },
+  { to: '/pdv', label: 'PDV', icon: ShoppingCart },
+  { to: '/vendas', label: 'Vendas', icon: Receipt },
   { to: '/produtos', label: 'Produtos', icon: Package },
   { to: '/estoque', label: 'Estoque', icon: Boxes },
   { to: '/clientes', label: 'Clientes', icon: Users },
