@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, Sun, Moon, ChevronDown, User, LogOut } from 'lucide-react';
+import { Menu, Sun, Moon, ChevronDown, Settings, LogOut } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
@@ -13,7 +13,7 @@ import Notificacoes from '@/components/Notificacoes';
 
 export default function Header({ onMenuClick }) {
   const { isDark, toggleTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logout, perfil, pode } = useAuth();
   const navigate = useNavigate();
   const name = user?.nome || user?.full_name || user?.email || 'Usuário';
   const initial = (name || 'U')[0].toUpperCase();
@@ -80,11 +80,16 @@ export default function Header({ onMenuClick }) {
             <ChevronDown size={16} className="text-snow/50" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 bg-graphite border-[rgba(125,226,209,0.15)] text-snow">
-            <DropdownMenuLabel className="text-snow/60 text-xs font-normal">{name}</DropdownMenuLabel>
+            <DropdownMenuLabel className="font-normal">
+              <p className="text-sm text-snow truncate">{name}</p>
+              <p className="text-xs text-snow/50 truncate">{perfil}{user?.email && name !== user.email ? ` · ${user.email}` : ''}</p>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-[rgba(125,226,209,0.10)]" />
-            <DropdownMenuItem className="hover:bg-graphite-hover focus:bg-graphite-hover cursor-pointer" onClick={() => navigate('/configuracoes')}>
-              <User size={16} className="mr-2 text-pearl" /> Perfil
-            </DropdownMenuItem>
+            {pode('configuracoes.gerenciar') && (
+              <DropdownMenuItem className="hover:bg-graphite-hover focus:bg-graphite-hover cursor-pointer" onClick={() => navigate('/configuracoes')}>
+                <Settings size={16} className="mr-2 text-pearl" /> Configurações
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem className="hover:bg-graphite-hover focus:bg-graphite-hover cursor-pointer text-danger focus:text-danger" onClick={() => logout()}>
               <LogOut size={16} className="mr-2" /> Sair
             </DropdownMenuItem>

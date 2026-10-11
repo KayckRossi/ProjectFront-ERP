@@ -254,6 +254,8 @@ export default function Financeiro() {
                       <td className="py-3 px-4 text-snow">
                         {t.vendaId ? (
                           <Link to={`/vendas?venda=${encodeURIComponent(t.vendaId)}`} className="hover:text-pearl hover:underline">{t.descricao}</Link>
+                        ) : t.compraId ? (
+                          <Link to={`/backoffice/compras?compra=${encodeURIComponent(t.compraId)}`} className="hover:text-pearl hover:underline">{t.descricao}</Link>
                         ) : t.descricao}
                       </td>
                       <td className="py-3 px-4 text-snow/70">{t.categoria}</td>
