@@ -868,7 +868,7 @@ Os testes em `src/api/contrato.test.js` verificam este contrato de ponta a ponta
 Os testes criam os próprios registros (com nomes únicos) e os excluem no final. Mesmo assim, **use um banco de desenvolvimento ou de testes**, porque vendas e lançamentos de teste ficam no histórico.
 
 ```bash
-# Contra o servidor de demonstração (roda também no CI)
+# Contra o servidor de demonstração
 npm test
 
 # Contra o backend real

@@ -21,4 +21,4 @@ Start with `README.md` for local setup and environment variables.
 - `npm run dev` inicia o front-end; sem backend configurado o app roda em modo demonstração.
 - Ao mudar o contrato da API, atualize juntos `CONTRATO_API_BACKEND.md`, `src/api/demo/dominio.js` e `src/api/contrato.test.js`.
 - `src/lib/datas.js`, `dinheiro.js`, `texto.js`, `mascaras.js` e `estoque.js` usam só imports relativos, porque também rodam no servidor de demonstração e nos testes em Node.
-- Run `npm run lint`, `npm test` and `npm run build` before finishing code changes (o CI roda os mesmos passos).
+- Run `npm run lint`, `npm test` and `npm run build` before finishing code changes.

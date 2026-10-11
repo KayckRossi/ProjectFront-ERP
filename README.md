@@ -88,7 +88,7 @@ Sem `VITE_API_URL`, um servidor de demonstração dentro do navegador (`src/api/
 - **Gráficos**: [Recharts](https://recharts.org/)
 - **Ícones**: [Lucide React](https://lucide.dev/)
 - **Dados**: [TanStack Query](https://tanstack.com/query) sobre uma API REST própria via `fetch` (contrato em [`CONTRATO_API_BACKEND.md`](CONTRATO_API_BACKEND.md))
-- **Testes**: [Vitest](https://vitest.dev/), com CI no GitHub Actions (lint, testes e build a cada push e pull request)
+- **Testes**: [Vitest](https://vitest.dev/)
 
 ---
 
@@ -186,7 +186,6 @@ Em produção (Vercel/Netlify), defina `VITE_API_URL` nas variáveis de ambiente
 │   ├── App.jsx         # Roteamento central e provedores
 │   ├── index.css       # Estilos globais e tokens Tailwind
 │   └── main.jsx        # Ponto de entrada React
-├── .github/workflows/  # CI: lint, testes e build
 ├── CONTRATO_API_BACKEND.md
 ├── index.html
 ├── package.json
