@@ -6,6 +6,8 @@ Nexora ERP & PDV — front-end em React + Vite + Tailwind. Treat it as user-owne
 
 Start with `README.md` for local setup and environment variables.
 
+As telas de backoffice (caixas, compras, fornecedores, categorias, usuários, auditoria) ficam em outro repositório, `KayckRossi/nexora-backoffice`, que usa a mesma API e tem uma cópia de `src/api/demo/`, `src/lib/permissoes.js` e `src/api/contrato.test.js`. Este repositório é a fonte da verdade do contrato.
+
 ## Key Files
 
 - `src/`: frontend application source.
@@ -20,7 +22,7 @@ Start with `README.md` for local setup and environment variables.
 ## Working Notes
 
 - `npm run dev` inicia o front-end; sem backend configurado o app roda em modo demonstração.
-- Ao mudar o contrato da API, atualize juntos `CONTRATO_API_BACKEND.md`, `src/api/demo/dominio/` (e a rota em `servidor.js`) e `src/api/contrato.test.js`.
+- Ao mudar o contrato da API, atualize juntos `CONTRATO_API_BACKEND.md`, `src/api/demo/dominio/` (e a rota em `servidor.js`) e `src/api/contrato.test.js`, e copie as mudanças para o nexora-backoffice.
 - Telas novas: registre a rota em `ROTAS_INTERNAS` (`src/App.jsx`) com a permissão, e o item no `Sidebar` e na `BuscaGlobal`.
 - `src/lib/datas.js`, `dinheiro.js`, `texto.js`, `mascaras.js`, `estoque.js` e `permissoes.js` usam só imports relativos, porque também rodam no servidor de demonstração e nos testes em Node.
 - Run `npm run lint`, `npm test` and `npm run build` before finishing code changes.

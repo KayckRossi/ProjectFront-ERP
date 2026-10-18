@@ -28,14 +28,8 @@ const Financeiro = lazy(() => import('@/pages/Financeiro'));
 const Relatorios = lazy(() => import('@/pages/Relatorios'));
 const Configuracoes = lazy(() => import('@/pages/Configuracoes'));
 
-const Caixa = lazy(() => import('@/pages/backoffice/Caixa'));
-const Compras = lazy(() => import('@/pages/backoffice/Compras'));
-const Fornecedores = lazy(() => import('@/pages/backoffice/Fornecedores'));
-const Categorias = lazy(() => import('@/pages/backoffice/Categorias'));
-const Usuarios = lazy(() => import('@/pages/backoffice/Usuarios'));
-const Auditoria = lazy(() => import('@/pages/backoffice/Auditoria'));
-
-// Rotas internas e a permissão exigida (src/lib/permissoes.js)
+// Rotas internas e a permissão exigida (src/lib/permissoes.js).
+// Caixa, compras, fornecedores, categorias, usuários e auditoria ficam no Nexora Backoffice (outro repositório).
 const ROTAS_INTERNAS = [
   { caminho: '/pdv', permissao: 'pdv.operar', Pagina: PDV },
   { caminho: '/pos', permissao: 'pdv.operar', Pagina: PDV },
@@ -46,12 +40,6 @@ const ROTAS_INTERNAS = [
   { caminho: '/financeiro', permissao: 'financeiro.ver', Pagina: Financeiro },
   { caminho: '/relatorios', permissao: 'relatorios.ver', Pagina: Relatorios },
   { caminho: '/configuracoes', permissao: 'configuracoes.gerenciar', Pagina: Configuracoes },
-  { caminho: '/backoffice/caixa', permissao: 'pdv.operar', Pagina: Caixa },
-  { caminho: '/backoffice/compras', permissao: 'compras.gerenciar', Pagina: Compras },
-  { caminho: '/backoffice/fornecedores', permissao: 'fornecedores.gerenciar', Pagina: Fornecedores },
-  { caminho: '/backoffice/categorias', permissao: 'categorias.gerenciar', Pagina: Categorias },
-  { caminho: '/backoffice/usuarios', permissao: 'usuarios.gerenciar', Pagina: Usuarios },
-  { caminho: '/backoffice/auditoria', permissao: 'auditoria.ver', Pagina: Auditoria },
 ];
 
 // O operador de caixa não vê o dashboard: começa direto no PDV

@@ -212,14 +212,15 @@ export default function PDV() {
       </PageHeader>
 
       {abaAtual === 'pedidos' && <KanbanPedidos />}
-      {abaAtual === 'caixa' && caixaBloqueado && (
-        <div className="flex-1 flex items-start justify-center pt-8">
-          <PainelCaixa variante="cartao" />
+      {/* Um único painel, que só troca de variante: ao fechar o caixa pela barra, ele continua montado
+          e mostra o relatório de fechamento em vez de sumir junto com a barra */}
+      {abaAtual === 'caixa' && (
+        <div className={caixaBloqueado ? 'flex-1 flex items-start justify-center pt-8' : 'contents'}>
+          <PainelCaixa variante={caixaBloqueado ? 'cartao' : 'barra'} />
         </div>
       )}
       {abaAtual === 'caixa' && !caixaBloqueado && (
       <>
-      <PainelCaixa variante="barra" />
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] lg:grid-rows-[minmax(0,1fr)] gap-4 flex-1 min-h-0">
         {/* Produtos */}
         <div className="flex flex-col min-h-0">

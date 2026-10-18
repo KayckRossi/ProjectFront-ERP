@@ -68,27 +68,24 @@ A interface utiliza um esquema de cores moderno de alto contraste para máxima l
 - Vendas por dia, por categoria, produtos mais vendidos e melhores clientes, todos no período escolhido.
 - Exportação de cada relatório em CSV (compatível com Excel).
 
-### 9. 🗄️ Backoffice (retaguarda)
-- **Caixa**: histórico de aberturas e fechamentos por operador, com vendas por forma de pagamento, sangrias, suprimentos e diferença.
-- **Compras e entrada de mercadorias**: pedido ao fornecedor, recebimento que soma ao estoque, atualiza o custo (com alerta de custo acima do preço) e lança a despesa no Financeiro com vencimento pelo prazo do fornecedor.
-- **Fornecedores**: cadastro com CNPJ, contato e prazo de pagamento.
-- **Categorias**: cadastro com cor, usada no PDV e nos relatórios.
-- **Usuários e perfis**: administrador, gerente e operador de caixa; desativação (sem apagar histórico) e envio de redefinição de senha.
-- **Auditoria**: quem fez o quê e quando (vendas, cancelamentos, preços, estoque, caixa, compras, usuários).
+### 9. 🗄️ Backoffice (repositório separado)
+As telas de retaguarda (histórico de **caixas**, **compras e entrada de mercadorias**, **fornecedores**, **categorias**, **usuários** e **auditoria**) ficam no **[nexora-backoffice](https://github.com/KayckRossi/nexora-backoffice)**, outro front-end que usa a mesma API. Com `VITE_BACKOFFICE_URL` definida, o menu ganha o atalho **Backoffice**, e o sino e o Financeiro levam às compras de lá.
+
+A abertura, a sangria, o suprimento e o fechamento do caixa continuam no PDV deste app.
 
 #### Perfis de acesso
-| Perfil | Acesso |
-|---|---|
-| Administrador | Tudo, inclusive usuários, auditoria e configurações |
-| Gerente | Operação e gestão: dashboard, vendas e cancelamentos, estoque, financeiro, relatórios, caixa de todos, compras, fornecedores e categorias |
-| Operador de caixa | PDV, o próprio caixa, histórico de vendas e cadastro de clientes |
+| Perfil | Acesso no ERP & PDV | No Backoffice |
+|---|---|---|
+| Administrador | Tudo, inclusive configurações | Tudo, inclusive usuários e auditoria |
+| Gerente | Dashboard, vendas e cancelamentos, produtos, estoque, clientes, financeiro e relatórios | Caixa de todos, compras, fornecedores e categorias |
+| Operador de caixa | PDV, o próprio caixa, histórico de vendas e cadastro de clientes | O próprio caixa |
 
 O menu, a busca global e as notificações mostram só o que o perfil pode usar, e o backend aplica as mesmas regras (`src/lib/permissoes.js`).
 
 ### 10. ⚙️ Configurações e navegação
 - Dados da loja e mensagem do cupom, modelo de impressão, regras do PDV, alertas e segurança, salvos no backend.
 - **Busca global** (`Ctrl+K`): páginas, produtos, clientes e vendas pelo número, ignorando acentos.
-- **Notificações** reais no sino: produtos sem estoque ou com estoque baixo, compras aguardando recebimento e pedidos pendentes.
+- **Notificações** reais no sino: produtos sem estoque ou com estoque baixo, pedidos pendentes e compras aguardando recebimento (estas com `VITE_BACKOFFICE_URL`).
 
 ### 💾 Modo demonstração
 Sem `VITE_API_URL`, um servidor de demonstração dentro do navegador (`src/api/demo/`) responde às mesmas rotas do contrato da API. Ele gera um histórico de cerca de 6 meses de vendas, caixas, compras, despesas e pedidos a partir da data atual e salva tudo no `localStorage`. Para voltar aos dados iniciais, use **Configurações → Dados → Restaurar**.
@@ -172,6 +169,7 @@ O front segue o contrato em [`CONTRATO_API_BACKEND.md`](CONTRATO_API_BACKEND.md)
 |---|---|
 | `VITE_API_URL` | URL do backend (ex.: `http://localhost:3000`). Vazia = modo demonstração. `/` = mesma origem do front. |
 | `API_PROXY_TARGET` | Só para desenvolvimento/preview: com `VITE_API_URL=/`, o Vite encaminha `/api` para este endereço e evita CORS. |
+| `VITE_BACKOFFICE_URL` | Endereço do [Nexora Backoffice](https://github.com/KayckRossi/nexora-backoffice) (ex.: `http://localhost:5174`). Mostra o atalho no menu e os links para compras. Vazia = sem links. |
 
 Duas formas de ligar o backend em desenvolvimento:
 
@@ -211,7 +209,6 @@ Em produção (Vercel/Netlify), defina `VITE_API_URL` nas variáveis de ambiente
 │   ├── hooks/          # Hooks customizados (paginação, Esc para fechar, valor atrasado...)
 │   ├── lib/            # Contextos (auth, tema), permissões, datas, dinheiro, máscaras, formatação e CSV
 │   ├── pages/          # Telas completas (Dashboard, PDV, Vendas, Estoque, etc.)
-│   │   └── backoffice/ # Caixa, Compras, Fornecedores, Categorias, Usuários e Auditoria
 │   ├── App.jsx         # Roteamento central e provedores
 │   ├── index.css       # Estilos globais e tokens Tailwind
 │   └── main.jsx        # Ponto de entrada React
