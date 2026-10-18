@@ -9,9 +9,13 @@ export default [
     files: [
       "src/components/**/*.{js,mjs,cjs,jsx}",
       "src/pages/**/*.{js,mjs,cjs,jsx}",
-      "src/Layout.jsx",
+      "src/api/**/*.{js,jsx}",
+      "src/lib/**/*.{js,jsx}",
+      "src/hooks/**/*.{js,jsx}",
+      "src/App.jsx",
+      "src/main.jsx",
     ],
-    ignores: ["src/lib/**/*", "src/components/ui/**/*"],
+    ignores: ["src/components/ui/**/*"],
     ...pluginJs.configs.recommended,
     ...pluginReact.configs.flat.recommended,
     languageOptions: {
@@ -57,6 +61,13 @@ export default [
 
 
       "react-hooks/rules-of-hooks": "error",
+    },
+  },
+  {
+    // Testes (Vitest) rodam no Node
+    files: ["src/**/*.test.js"],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
     },
   },
 ];

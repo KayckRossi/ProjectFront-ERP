@@ -6,9 +6,9 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PaginaNaoEncontrada from '@/pages/PaginaNaoEncontrada';
 import { AuthProvider } from '@/lib/AuthContext';
 import { ThemeProvider } from '@/lib/ThemeContext';
-import { ErpDataProvider } from '@/lib/ErpDataContext';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import Layout from '@/components/Layout';
 
 // Páginas carregadas sob demanda para reduzir o bundle inicial
@@ -19,6 +19,7 @@ const RedefinirSenha = lazy(() => import('@/pages/RedefinirSenha'));
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const PDV = lazy(() => import('@/pages/PDV'));
+const Vendas = lazy(() => import('@/pages/Vendas'));
 const Produtos = lazy(() => import('@/pages/Produtos'));
 const Estoque = lazy(() => import('@/pages/Estoque'));
 const Clientes = lazy(() => import('@/pages/Clientes'));
@@ -49,6 +50,7 @@ const AppRoutes = () => {
             <Route path="/" element={<Dashboard />} />
             <Route path="/pdv" element={<PDV />} />
             <Route path="/pos" element={<PDV />} />
+            <Route path="/vendas" element={<Vendas />} />
             <Route path="/produtos" element={<Produtos />} />
             <Route path="/estoque" element={<Estoque />} />
             <Route path="/clientes" element={<Clientes />} />
@@ -65,19 +67,19 @@ const AppRoutes = () => {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <ErpDataProvider>
-          <QueryClientProvider client={queryClientInstance}>
-            <Router>
-              <ScrollToTop />
+    <QueryClientProvider client={queryClientInstance}>
+      <ThemeProvider>
+        <AuthProvider>
+          <Router>
+            <ScrollToTop />
+            <ErrorBoundary>
               <AppRoutes />
-            </Router>
-            <Toaster />
-          </QueryClientProvider>
-        </ErpDataProvider>
-      </AuthProvider>
-    </ThemeProvider>
+            </ErrorBoundary>
+          </Router>
+          <Toaster />
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   )
 }
 

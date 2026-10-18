@@ -1,11 +1,13 @@
 import { Suspense, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import ErrorBoundary from './ErrorBoundary';
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { pathname } = useLocation();
 
   return (
     <div className="flex h-screen bg-onyx text-snow overflow-hidden">
@@ -24,7 +26,10 @@ export default function Layout() {
               <div className="w-8 h-8 border-4 border-graphite border-t-verdigris rounded-full animate-spin"></div>
             </div>
           }>
-            <Outlet />
+            {/* Um erro numa tela não derruba o menu; trocar de rota limpa o erro */}
+            <ErrorBoundary chave={pathname}>
+              <Outlet />
+            </ErrorBoundary>
           </Suspense>
         </main>
       </div>

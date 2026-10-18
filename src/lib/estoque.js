@@ -1,4 +1,4 @@
-// Regras de status de estoque compartilhadas entre Estoque e Dashboard
+// Regra de status de estoque (CONTRATO_API_BACKEND.md, seção 3), usada pelo servidor de demonstração
 
 export function statusEstoque(p) {
   const estoque = p.estoque ?? 0;
@@ -8,9 +8,3 @@ export function statusEstoque(p) {
   if (estoque < estoqueMin * 1.5) return 'Baixo';
   return 'OK';
 }
-
-// Produtos que ainda têm unidades, mas precisam de reposição
-export const estoqueBaixo = (p) => {
-  const estoque = p.estoque ?? 0;
-  return estoque > 0 && estoque < (p.estoqueMinimo ?? 0) * 1.5;
-};

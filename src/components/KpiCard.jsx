@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { formatCurrency } from '@/lib/format';
 
 function useCountUp(target, duration = 1200) {
   const [val, setVal] = useState(0);
@@ -18,11 +19,10 @@ function useCountUp(target, duration = 1200) {
   return val;
 }
 
-export default function KpiCard({ icon: Icon, label, value, prefix = '', suffix = '', accent = '#7DE2D1' }) {
+// `moeda` formata como R$ (sempre com centavos); sem ele, mostra um número inteiro
+export default function KpiCard({ icon: Icon, label, value = 0, moeda = false, detalhe, accent = '#7DE2D1' }) {
   const animated = useCountUp(value);
-  const display = Number.isInteger(value)
-    ? Math.round(animated).toLocaleString('pt-BR')
-    : animated.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  const display = moeda ? formatCurrency(animated) : Math.round(animated).toLocaleString('pt-BR');
 
   return (
     <motion.div
@@ -34,9 +34,8 @@ export default function KpiCard({ icon: Icon, label, value, prefix = '', suffix 
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-snow/50 font-medium">{label}</p>
-          <p className="text-2xl font-semibold text-snow mt-2 tracking-tight">
-            {prefix}{display}{suffix}
-          </p>
+          <p className="text-2xl font-semibold text-snow mt-2 tracking-tight">{display}</p>
+          {detalhe && <p className="text-xs text-snow/40 mt-1">{detalhe}</p>}
         </div>
         <div className="w-11 h-11 rounded-lg bg-verdigris-light flex items-center justify-center">
           <Icon size={22} style={{ color: accent }} />
