@@ -1,6 +1,6 @@
 # 📑 Contrato de API — Nexora ERP & PDV (Front-end ➔ Back-end)
 
-Este documento especifica todos os endpoints REST, formatos de dados (JSON) esperados no envio (`Request Body`) e os retornos esperados (`Response Body`) pelo Front-end.
+Este documento especifica todos os endpoints REST, formatos de dados (JSON) esperados no envio (`Request Body`) e os retornos esperados (`Response Body`) pelos dois front-ends que usam a API: o **ERP & PDV** (este repositório) e o **[Nexora Backoffice](https://github.com/KayckRossi/nexora-backoffice)** (seções 10 a 15).
 
 > **Situação atual do front-end:** todas as telas já consomem esta API.
 > - Com `VITE_API_URL` definida, as chamadas vão para o backend real.
@@ -21,7 +21,7 @@ Este documento especifica todos os endpoints REST, formatos de dados (JSON) espe
 7. [Financeiro](#7-financeiro-apifinanceiro)
 8. [Dashboard & Relatórios](#8-dashboard--relatórios-apidashboard-e-apirelatorios)
 9. [Configurações](#9-configurações-apiconfiguracoes)
-**Backoffice (retaguarda)**
+**Backoffice (retaguarda)**: telas no [nexora-backoffice](https://github.com/KayckRossi/nexora-backoffice)
 
 10. [Perfis e permissões](#10-perfis-e-permissões)
 11. [Usuários](#11-usuários-apiusuarios)
@@ -245,7 +245,7 @@ Botão **Encerrar outras sessões** em Configurações → Segurança.
 ---
 
 ### 2.1.1 Criar, Atualizar e Excluir Categoria
-Tela **Backoffice → Categorias** (permissão `categorias.gerenciar`).
+Tela **Categorias** do Nexora Backoffice (permissão `categorias.gerenciar`).
 - **Endpoints**: `POST /api/categorias` (`201`), `PUT /api/categorias/:id` (`200`) e `DELETE /api/categorias/:id` (`200`, `{ "sucesso": true, "mensagem": "..." }`)
 - **Request Body**: `{ "nome": "Hortifruti", "cor": "#4CAF50" }`
 - **Regras**: `nome` obrigatório (`400`); `cor` no formato `#RRGGBB` (`400`; padrão `#339989`, salva em maiúsculas); nome já usado, ignorando maiúsculas e acentos → `409`; excluir categoria com produtos → `409` (a `mensagem` diz quantos).

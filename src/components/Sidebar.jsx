@@ -2,9 +2,10 @@ import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, ShoppingCart, Receipt, Package, Boxes, Users, Wallet, BarChart3, Settings,
-  Banknote, ShoppingBasket, Truck, Tags, UserCog, ScrollText, ChevronLeft, X
+  Building2, ChevronLeft, ExternalLink, X
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import { linkBackoffice } from '@/lib/links';
 
 // Cada item só aparece para perfis com a permissão (src/lib/permissoes.js)
 const GRUPOS = [
@@ -24,17 +25,6 @@ const GRUPOS = [
       { to: '/clientes', label: 'Clientes', icon: Users, permissao: 'clientes.gerenciar' },
       { to: '/financeiro', label: 'Financeiro', icon: Wallet, permissao: 'financeiro.ver' },
       { to: '/relatorios', label: 'Relatórios', icon: BarChart3, permissao: 'relatorios.ver' },
-    ],
-  },
-  {
-    titulo: 'Backoffice',
-    itens: [
-      { to: '/backoffice/caixa', label: 'Caixa', icon: Banknote, permissao: 'pdv.operar' },
-      { to: '/backoffice/compras', label: 'Compras', icon: ShoppingBasket, permissao: 'compras.gerenciar' },
-      { to: '/backoffice/fornecedores', label: 'Fornecedores', icon: Truck, permissao: 'fornecedores.gerenciar' },
-      { to: '/backoffice/categorias', label: 'Categorias', icon: Tags, permissao: 'categorias.gerenciar' },
-      { to: '/backoffice/usuarios', label: 'Usuários', icon: UserCog, permissao: 'usuarios.gerenciar' },
-      { to: '/backoffice/auditoria', label: 'Auditoria', icon: ScrollText, permissao: 'auditoria.ver' },
       { to: '/configuracoes', label: 'Configurações', icon: Settings, permissao: 'configuracoes.gerenciar' },
     ],
   },
@@ -120,6 +110,19 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
           </div>
         ))}
       </nav>
+
+      {/* Atalho para o Nexora Backoffice (outro app), quando VITE_BACKOFFICE_URL está definida */}
+      {linkBackoffice() && (
+        <a
+          href={linkBackoffice()}
+          title="Abrir o Backoffice: caixa, compras, fornecedores, usuários"
+          className={`flex items-center gap-3 mx-3 mb-3 py-2.5 rounded-lg text-snow/70 hover:text-snow hover:bg-graphite-hover transition-colors ${collapsed ? 'justify-center px-0' : 'px-3'}`}
+        >
+          <Building2 size={20} className="shrink-0" />
+          {!collapsed && <span className="text-sm font-medium flex-1">Backoffice</span>}
+          {!collapsed && <ExternalLink size={14} className="text-snow/40" />}
+        </a>
+      )}
 
       {/* Collapse toggle (desktop) */}
       <button

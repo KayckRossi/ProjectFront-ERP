@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, LayoutDashboard, ShoppingCart, Receipt, Package, Boxes, Users, Wallet, BarChart3, Settings, Hash, User,
-  Banknote, ShoppingBasket, Truck, Tags, UserCog, ScrollText,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -21,12 +20,6 @@ const PAGINAS = [
   { caminho: '/clientes', rotulo: 'Clientes', icone: Users, permissao: 'clientes.gerenciar' },
   { caminho: '/financeiro', rotulo: 'Financeiro', icone: Wallet, permissao: 'financeiro.ver' },
   { caminho: '/relatorios', rotulo: 'Relatórios', icone: BarChart3, permissao: 'relatorios.ver' },
-  { caminho: '/backoffice/caixa', rotulo: 'Caixa - abertura e fechamento', icone: Banknote, permissao: 'pdv.operar' },
-  { caminho: '/backoffice/compras', rotulo: 'Compras e entrada de mercadorias', icone: ShoppingBasket, permissao: 'compras.gerenciar' },
-  { caminho: '/backoffice/fornecedores', rotulo: 'Fornecedores', icone: Truck, permissao: 'fornecedores.gerenciar' },
-  { caminho: '/backoffice/categorias', rotulo: 'Categorias', icone: Tags, permissao: 'categorias.gerenciar' },
-  { caminho: '/backoffice/usuarios', rotulo: 'Usuários e permissões', icone: UserCog, permissao: 'usuarios.gerenciar' },
-  { caminho: '/backoffice/auditoria', rotulo: 'Auditoria', icone: ScrollText, permissao: 'auditoria.ver' },
   { caminho: '/configuracoes', rotulo: 'Configurações', icone: Settings, permissao: 'configuracoes.gerenciar' },
 ];
 

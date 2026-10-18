@@ -18,6 +18,7 @@ import { exportarCsv } from '@/lib/exportarCsv';
 import { dataLocalISO, periodoRapido } from '@/lib/datas';
 import { arredondar, lerValorMonetario } from '@/lib/dinheiro';
 import { formatCurrency, formatDate } from '@/lib/format';
+import { linkBackoffice } from '@/lib/links';
 
 const POR_PAGINA = 15;
 
@@ -254,8 +255,8 @@ export default function Financeiro() {
                       <td className="py-3 px-4 text-snow">
                         {t.vendaId ? (
                           <Link to={`/vendas?venda=${encodeURIComponent(t.vendaId)}`} className="hover:text-pearl hover:underline">{t.descricao}</Link>
-                        ) : t.compraId ? (
-                          <Link to={`/backoffice/compras?compra=${encodeURIComponent(t.compraId)}`} className="hover:text-pearl hover:underline">{t.descricao}</Link>
+                        ) : t.compraId && linkBackoffice() ? (
+                          <a href={linkBackoffice(`/compras?compra=${encodeURIComponent(t.compraId)}`)} className="hover:text-pearl hover:underline">{t.descricao}</a>
                         ) : t.descricao}
                       </td>
                       <td className="py-3 px-4 text-snow/70">{t.categoria}</td>
