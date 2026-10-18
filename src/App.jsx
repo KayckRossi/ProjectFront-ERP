@@ -1,8 +1,8 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import PaginaNaoEncontrada from '@/pages/PaginaNaoEncontrada';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { ThemeProvider } from '@/lib/ThemeContext';
@@ -11,6 +11,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Layout from '@/components/Layout';
 import RotaComPermissao from '@/components/RotaComPermissao';
+import { backofficeConfigurado, linkBackoffice } from '@/lib/links';
 
 // Páginas carregadas sob demanda para reduzir o bundle inicial
 const Login = lazy(() => import('@/pages/Login'));
@@ -48,6 +49,16 @@ function Inicio() {
   return pode('dashboard.ver') ? <Dashboard /> : <Navigate to="/pdv" replace />;
 }
 
+// Endereços antigos (/backoffice/compras...) vão para a mesma tela no Nexora Backoffice, quando configurado
+function RedirecionarBackoffice() {
+  const { '*': caminho } = useParams();
+  const { search } = useLocation();
+  useEffect(() => {
+    if (backofficeConfigurado) window.location.replace(linkBackoffice(`/${caminho}${search}`));
+  }, [caminho, search]);
+  return backofficeConfigurado ? null : <PaginaNaoEncontrada />;
+}
+
 const Carregando = () => (
   <div className="fixed inset-0 flex items-center justify-center bg-onyx">
     <div className="w-8 h-8 border-4 border-graphite border-t-verdigris rounded-full animate-spin"></div>
@@ -74,6 +85,7 @@ const AppRoutes = () => {
             ))}
           </Route>
         </Route>
+        <Route path="/backoffice/*" element={<RedirecionarBackoffice />} />
         <Route path="*" element={<PaginaNaoEncontrada />} />
       </Routes>
     </Suspense>

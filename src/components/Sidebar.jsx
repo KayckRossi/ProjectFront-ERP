@@ -5,7 +5,7 @@ import {
   Building2, ChevronLeft, ExternalLink, X
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
-import { linkBackoffice } from '@/lib/links';
+import { backofficeConfigurado, linkBackoffice, propsLinkExterno } from '@/lib/links';
 
 // Cada item só aparece para perfis com a permissão (src/lib/permissoes.js)
 const GRUPOS = [
@@ -112,10 +112,11 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
       </nav>
 
       {/* Atalho para o Nexora Backoffice (outro app), quando VITE_BACKOFFICE_URL está definida */}
-      {linkBackoffice() && (
+      {backofficeConfigurado && (
         <a
           href={linkBackoffice()}
-          title="Abrir o Backoffice: caixa, compras, fornecedores, usuários"
+          {...propsLinkExterno}
+          title="Abrir o Backoffice em outra aba: caixa, compras, fornecedores, usuários"
           className={`flex items-center gap-3 mx-3 mb-3 py-2.5 rounded-lg text-snow/70 hover:text-snow hover:bg-graphite-hover transition-colors ${collapsed ? 'justify-center px-0' : 'px-3'}`}
         >
           <Building2 size={20} className="shrink-0" />
