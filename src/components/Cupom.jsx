@@ -13,7 +13,9 @@ const FORMATOS = {
   A4: { largura: '120mm', pagina: '@page { size: A4; margin: 15mm; }', previa: 'w-full max-w-[420px]' },
 };
 
-function Linha({ esquerda, direita, negrito = false }) {
+// ---------------------------------------------------------------- Blocos do papel impresso
+
+export function Linha({ esquerda, direita, negrito = false }) {
   return (
     <div className={`flex justify-between gap-2 ${negrito ? 'font-bold' : ''}`}>
       <span>{esquerda}</span>
@@ -22,13 +24,12 @@ function Linha({ esquerda, direita, negrito = false }) {
   );
 }
 
-const Divisor = () => <div className="border-t border-dashed border-black/50 my-2" />;
+export const Divisor = () => <div className="border-t border-dashed border-black/50 my-2" />;
 
-export function Cupom({ venda, configuracoes }) {
+export function CabecalhoLoja({ configuracoes, titulo }) {
   const loja = configuracoes?.loja ?? {};
-  const cancelada = venda.status === 'Cancelada';
   return (
-    <div className="font-mono text-[11px] leading-snug text-black">
+    <>
       <div className="text-center">
         <p className="font-bold text-[13px] uppercase">{loja.nome || 'Nexora'}</p>
         {loja.cnpj && <p>CNPJ {loja.cnpj}</p>}
@@ -36,10 +37,19 @@ export function Cupom({ venda, configuracoes }) {
         {loja.telefone && <p>Tel. {loja.telefone}</p>}
       </div>
       <Divisor />
-      <p className="text-center font-bold">CUPOM NÃO FISCAL</p>
-      {cancelada && <p className="text-center font-bold">*** VENDA CANCELADA ***</p>}
+      <p className="text-center font-bold">{titulo}</p>
+    </>
+  );
+}
+
+export function Cupom({ venda, configuracoes }) {
+  return (
+    <div className="font-mono text-[11px] leading-snug text-black">
+      <CabecalhoLoja configuracoes={configuracoes} titulo="CUPOM NÃO FISCAL" />
+      {venda.status === 'Cancelada' && <p className="text-center font-bold">*** VENDA CANCELADA ***</p>}
       <Linha esquerda={`Venda #${venda.numero}`} direita={formatDataHora(venda.data)} />
       <p>Cliente: {venda.cliente}</p>
+      {venda.operador && <p>Operador: {venda.operador}</p>}
       <Divisor />
       {venda.itens.map((item) => (
         <div key={item.produtoId} className="mb-1">
@@ -68,9 +78,11 @@ export function Cupom({ venda, configuracoes }) {
   );
 }
 
-// Pré-visualização do cupom + impressão. Uma cópia é renderizada direto no <body> para o CSS de impressão
-// (index.css) imprimir só o cupom, sem a interface ao redor.
-export function CupomModal({ venda, configuracoes, titulo, subtitulo, onClose, imprimirAoAbrir = false, children }) {
+// ---------------------------------------------------------------- Modal com pré-visualização e impressão
+
+// Mostra o `documento` como papel e imprime só ele: uma cópia é renderizada direto no <body>
+// para o CSS de impressão (index.css) esconder o restante da tela.
+export function ModalImpressao({ titulo, subtitulo, configuracoes, documento, onClose, imprimirAoAbrir = false, rotuloImprimir = 'Imprimir', children }) {
   const formato = FORMATOS[configuracoes?.impressao?.modelo] ?? FORMATOS['Térmica 80mm'];
 
   useEffect(() => {
@@ -80,28 +92,42 @@ export function CupomModal({ venda, configuracoes, titulo, subtitulo, onClose, i
   }, [imprimirAoAbrir]);
 
   return (
-    <Modal titulo={titulo ?? `Venda #${venda.numero}`} subtitulo={subtitulo} onClose={onClose} largura="max-w-lg">
+    <Modal titulo={titulo} subtitulo={subtitulo} onClose={onClose} largura="max-w-lg">
       <div className="bg-onyx rounded-lg p-4 mb-5 max-h-[50vh] overflow-y-auto">
-        <div className={`${formato.previa} mx-auto bg-white rounded-md p-4 shadow-md`}>
-          <Cupom venda={venda} configuracoes={configuracoes} />
-        </div>
+        <div className={`${formato.previa} mx-auto bg-white rounded-md p-4 shadow-md`}>{documento}</div>
       </div>
       <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={() => window.print()}
           className="flex-1 h-11 rounded-lg border border-pearl/40 text-pearl text-sm font-medium hover:bg-pearl-muted transition-colors inline-flex items-center justify-center gap-2"
         >
-          <Printer size={17} /> Imprimir cupom
+          <Printer size={17} /> {rotuloImprimir}
         </button>
         {children}
       </div>
       {createPortal(
         <div className="area-impressao" style={{ width: formato.largura }}>
           <style>{formato.pagina}</style>
-          <Cupom venda={venda} configuracoes={configuracoes} />
+          {documento}
         </div>,
         document.body,
       )}
     </Modal>
+  );
+}
+
+export function CupomModal({ venda, configuracoes, titulo, subtitulo, onClose, imprimirAoAbrir = false, children }) {
+  return (
+    <ModalImpressao
+      titulo={titulo ?? `Venda #${venda.numero}`}
+      subtitulo={subtitulo}
+      configuracoes={configuracoes}
+      documento={<Cupom venda={venda} configuracoes={configuracoes} />}
+      onClose={onClose}
+      imprimirAoAbrir={imprimirAoAbrir}
+      rotuloImprimir="Imprimir cupom"
+    >
+      {children}
+    </ModalImpressao>
   );
 }

@@ -7,11 +7,13 @@ import PageHeader from '@/components/PageHeader';
 import KanbanPedidos from '@/components/KanbanPedidos';
 import Modal from '@/components/Modal';
 import { CupomModal } from '@/components/Cupom';
+import PainelCaixa from '@/components/caixa/PainelCaixa';
 import { EstadoConsulta } from '@/components/EstadoConsulta';
 import { useCategorias, useProdutos } from '@/api/produtos';
 import { useClientes } from '@/api/clientes';
 import { useConfiguracoes } from '@/api/configuracoes';
 import { useRegistrarVenda } from '@/api/vendas';
+import { useCaixaAtual } from '@/api/caixa';
 import { formatCurrency } from '@/lib/format';
 import { calcularTotais, lerValorMonetario } from '@/lib/dinheiro';
 import { contemTexto } from '@/lib/texto';
@@ -44,6 +46,7 @@ export default function PDV() {
   const { data: clientes = [] } = useClientes();
   const { data: configuracoes } = useConfiguracoes();
   const registrarVenda = useRegistrarVenda();
+  const caixaQuery = useCaixaAtual();
 
   const [busca, setBusca] = useState('');
   const [categoriaAtiva, setCategoriaAtiva] = useState('all');
@@ -62,6 +65,9 @@ export default function PDV() {
   useEffect(() => {
     if (searchParams.get('aba') === 'pedidos') setAbaAtual('pedidos');
   }, [searchParams]);
+
+  // Com "exigir caixa aberto" (Configurações), só dá para vender depois de abrir o caixa
+  const caixaBloqueado = configuracoes?.pdv?.exigirCaixaAberto !== false && caixaQuery.isSuccess && !caixaQuery.data;
 
   const produtos = useMemo(() => produtosQuery.data ?? [], [produtosQuery.data]);
   const produtosPorId = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos]);
@@ -122,7 +128,7 @@ export default function PDV() {
   };
 
   const abrirPagamento = () => {
-    if (!itens.length) return;
+    if (!itens.length || caixaBloqueado) return;
     setValorRecebido('');
     setModalPagamentoAberto(true);
   };
@@ -149,8 +155,11 @@ export default function PDV() {
       },
       onError: (erro) => {
         toast({ title: 'Não foi possível finalizar a venda', description: erro.message, variant: 'destructive' });
-        // Estoque ou preço podem ter mudado em outro caixa
-        if (erro.status === 409 || erro.status === 400) produtosQuery.refetch();
+        // Estoque, preço ou o próprio caixa podem ter mudado em outra tela
+        if (erro.status === 409 || erro.status === 400) {
+          produtosQuery.refetch();
+          caixaQuery.refetch();
+        }
       },
     });
   };
@@ -202,9 +211,15 @@ export default function PDV() {
         </div>
       </PageHeader>
 
-      {abaAtual === 'pedidos' ? (
-        <KanbanPedidos />
-      ) : (
+      {abaAtual === 'pedidos' && <KanbanPedidos />}
+      {abaAtual === 'caixa' && caixaBloqueado && (
+        <div className="flex-1 flex items-start justify-center pt-8">
+          <PainelCaixa variante="cartao" />
+        </div>
+      )}
+      {abaAtual === 'caixa' && !caixaBloqueado && (
+      <>
+      <PainelCaixa variante="barra" />
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] lg:grid-rows-[minmax(0,1fr)] gap-4 flex-1 min-h-0">
         {/* Produtos */}
         <div className="flex flex-col min-h-0">
@@ -408,6 +423,7 @@ export default function PDV() {
           </div>
         </motion.div>
       </div>
+      </>
       )}
 
       {/* Pagamento e, depois dele, o cupom da venda concluída (mode="wait" evita os dois na tela ao mesmo tempo) */}

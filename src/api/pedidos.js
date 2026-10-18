@@ -4,8 +4,8 @@ import { api } from '@/api/http';
 const CHAVE = ['pedidos'];
 
 // Atualiza periodicamente para mostrar pedidos feitos em outros caixas
-export function usePedidos({ atualizarACada = 15_000 } = {}) {
-  return useQuery({ queryKey: CHAVE, queryFn: () => api('/api/pedidos'), refetchInterval: atualizarACada });
+export function usePedidos({ atualizarACada = 15_000, ativo = true } = {}) {
+  return useQuery({ queryKey: CHAVE, queryFn: () => api('/api/pedidos'), refetchInterval: atualizarACada, enabled: ativo });
 }
 
 // Atualização otimista: o card muda de coluna na hora e volta se o servidor recusar

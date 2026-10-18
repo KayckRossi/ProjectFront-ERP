@@ -8,6 +8,7 @@ import { LogIn, Mail, Lock, Loader2, Eye, EyeOff, AlertCircle, Sparkles } from "
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import { safeReturnTo } from "@/lib/safeReturnTo";
+import { CREDENCIAIS_DEMO } from "@/api/demo/credenciais";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -18,9 +19,9 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const returnTo = safeReturnTo();
 
-  const handlePreencherDemo = () => {
-    setEmail("admin@nexora.com");
-    setPassword("admin123");
+  const handlePreencherDemo = (credencial) => {
+    setEmail(credencial.email);
+    setPassword(credencial.senha);
     setError("");
   };
 
@@ -41,9 +42,13 @@ export default function Login() {
     }
   };
 
-  const handleGoogle = () => {
-    authApi.loginDemoGoogle();
-    window.location.href = returnTo;
+  const handleGoogle = async () => {
+    try {
+      await authApi.loginDemoGoogle();
+      window.location.href = returnTo;
+    } catch (err) {
+      setError(err?.message || "Não foi possível entrar. Tente novamente.");
+    }
   };
 
   return (
@@ -66,22 +71,27 @@ export default function Login() {
       {/* Credenciais de teste e login social existem apenas no modo demonstração */}
       {authApi.modoDemo && (<>
       <div className="mb-5 p-3.5 rounded-xl bg-onyx/90 border border-pearl/25 text-xs">
-        <div className="flex items-center justify-between mb-2">
-          <span className="font-semibold text-pearl flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-pearl" />
-            Credenciais de Acesso (Teste)
-          </span>
-          <button
-            type="button"
-            onClick={handlePreencherDemo}
-            className="text-[11px] text-pearl font-medium hover:underline bg-pearl/15 px-2 py-0.5 rounded-md hover:bg-pearl/25 transition-colors cursor-pointer"
-          >
-            Preencher dados
-          </button>
-        </div>
-        <div className="space-y-1 text-snow/75 font-mono">
-          <p><span className="text-snow/40">E-mail:</span> admin@nexora.com</p>
-          <p><span className="text-snow/40">Senha:</span> admin123</p>
+        <span className="font-semibold text-pearl flex items-center gap-1.5 mb-2">
+          <Sparkles className="w-3.5 h-3.5 text-pearl" />
+          Credenciais de Acesso (Teste)
+        </span>
+        <div className="space-y-1.5">
+          {CREDENCIAIS_DEMO.map((credencial) => (
+            <div key={credencial.email} className="flex items-center justify-between gap-2">
+              <p className="text-snow/75 min-w-0">
+                <span className="text-snow/50">{credencial.perfil}:</span>{" "}
+                <span className="font-mono">{credencial.email} / {credencial.senha}</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => handlePreencherDemo(credencial)}
+                className="shrink-0 text-[11px] text-pearl font-medium hover:underline bg-pearl/15 px-2 py-0.5 rounded-md hover:bg-pearl/25 transition-colors cursor-pointer"
+                aria-label={`Usar a conta de ${credencial.perfil}`}
+              >
+                Usar
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 

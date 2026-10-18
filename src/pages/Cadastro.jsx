@@ -76,9 +76,13 @@ export default function Cadastro() {
     }
   };
 
-  const handleGoogle = () => {
-    authApi.loginDemoGoogle();
-    window.location.href = safeReturnTo();
+  const handleGoogle = async () => {
+    try {
+      await authApi.loginDemoGoogle();
+      window.location.href = safeReturnTo();
+    } catch (err) {
+      setError(err?.message || "Não foi possível entrar. Tente novamente.");
+    }
   };
 
   if (showOtp) {

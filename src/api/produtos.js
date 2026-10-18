@@ -30,3 +30,21 @@ export function useExcluirProduto() {
     onSuccess: () => invalidar(queryClient, 'produtos', 'estoque', 'dashboard'),
   });
 }
+
+// { id?, nome, cor }
+export function useSalvarCategoria() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...dados }) =>
+      id ? api(`/api/categorias/${id}`, { method: 'PUT', body: dados }) : api('/api/categorias', { method: 'POST', body: dados }),
+    onSuccess: () => invalidar(queryClient, 'categorias', 'relatorios'),
+  });
+}
+
+export function useExcluirCategoria() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api(`/api/categorias/${id}`, { method: 'DELETE' }),
+    onSuccess: () => invalidar(queryClient, 'categorias'),
+  });
+}
