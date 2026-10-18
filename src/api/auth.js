@@ -4,16 +4,17 @@ import { api, backendConfigurado, tokenStorage } from '@/api/http';
 // No modo demonstração as mesmas rotas são respondidas pelo servidor em src/api/demo/.
 const CREDENCIAL_ADMIN_DEMO = { email: 'admin@nexora.com', password: 'admin123' };
 
-function guardarSessao(resposta) {
-  if (resposta?.access_token) tokenStorage.salvar(resposta.access_token);
+function guardarSessao(resposta, opcoes) {
+  if (resposta?.access_token) tokenStorage.salvar(resposta.access_token, opcoes);
   return resposta?.user ?? null;
 }
 
 export const authApi = {
   modoDemo: !backendConfigurado,
 
-  async login(email, password) {
-    return guardarSessao(await api('/api/auth/login', { method: 'POST', body: { email, password }, autenticado: false }));
+  // lembrar: false guarda a sessão só até fechar a aba ("Lembrar de mim" desmarcado)
+  async login(email, password, { lembrar = true } = {}) {
+    return guardarSessao(await api('/api/auth/login', { method: 'POST', body: { email, password }, autenticado: false }), { lembrar });
   },
 
   // Login social só existe na demonstração (entra como administrador); o contrato não prevê OAuth

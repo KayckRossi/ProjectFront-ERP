@@ -5,6 +5,7 @@ import { mascaraCnpj, mascaraDocumento, mascaraTelefone } from './mascaras.js';
 import { contemTexto, normalizarTexto, somenteDigitos } from './texto.js';
 import { parseDate } from './utils.js';
 import { PERMISSOES, pode } from './permissoes.js';
+import { montarCsv } from './exportarCsv.js';
 
 // Simula a digitação caractere por caractere, como acontece no formulário
 const digitar = (mascara, texto) => [...texto].reduce((atual, caractere) => mascara(atual + caractere), '');
@@ -74,6 +75,19 @@ describe('máscaras e texto', () => {
     expect(normalizarTexto('  Café TORRADO ')).toBe('cafe torrado');
     expect(contemTexto('Feijão Carioca', 'feijao')).toBe(true);
     expect(somenteDigitos('123.456.789-00')).toBe('12345678900');
+  });
+});
+
+describe('exportação CSV', () => {
+  it('usa ";" e vírgula decimal, e escapa aspas e quebras de linha', () => {
+    const csv = montarCsv([{ titulo: 'Nome', campo: 'nome' }, { titulo: 'Total', campo: 'total' }], [{ nome: 'Ana "Bia"; Souza', total: 35.96 }]);
+    expect(csv).toBe('Nome;Total\r\n"Ana ""Bia""; Souza";35,96');
+  });
+
+  it('não deixa texto virar fórmula no Excel, mas mantém números negativos', () => {
+    const linhas = ['=HYPERLINK("http://x")', '+1', '-2+3', '@SOMA(A1)', 'Café'].map((nome) => ({ nome, valor: -12.5 }));
+    const csv = montarCsv([{ titulo: 'Nome', campo: 'nome' }, { titulo: 'Valor', campo: 'valor' }], linhas).split('\r\n').slice(1);
+    expect(csv).toEqual([`"'=HYPERLINK(""http://x"")";-12,5`, "'+1;-12,5", "'-2+3;-12,5", "'@SOMA(A1);-12,5", 'Café;-12,5']);
   });
 });
 

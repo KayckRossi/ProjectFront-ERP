@@ -20,6 +20,7 @@ const respostaJson = (status, corpo) => new Response(corpo === undefined ? '' : 
 
 beforeEach(() => {
   vi.stubGlobal('localStorage', criarStorage());
+  vi.stubGlobal('sessionStorage', criarStorage());
   vi.stubGlobal('window', new EventTarget());
 });
 
@@ -94,6 +95,22 @@ describe('cliente HTTP com backend configurado', () => {
     expect(comParametros('/api/vendas', { dataInicio: '2026-10-01', status: '', clienteId: null, busca: 'ana maria' }))
       .toBe('/api/vendas?dataInicio=2026-10-01&busca=ana+maria');
     expect(comParametros('/api/vendas', {})).toBe('/api/vendas');
+  });
+});
+
+describe('"Lembrar de mim"', () => {
+  it('com lembrar, o token fica no localStorage; sem, só no sessionStorage', async () => {
+    const { tokenStorage } = await carregarHttp('http://api.teste');
+    tokenStorage.salvar('token-lembrado');
+    expect(localStorage.getItem('nexora_token')).toBe('token-lembrado');
+
+    tokenStorage.salvar('token-da-aba', { lembrar: false });
+    expect(localStorage.getItem('nexora_token')).toBeNull();
+    expect(sessionStorage.getItem('nexora_token')).toBe('token-da-aba');
+    expect(tokenStorage.obter()).toBe('token-da-aba');
+
+    tokenStorage.limpar();
+    expect(tokenStorage.obter()).toBeNull();
   });
 });
 
