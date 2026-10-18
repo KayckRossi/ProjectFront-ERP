@@ -14,15 +14,24 @@ export const EVENTO_SESSAO_EXPIRADA = 'nexora:sessao-expirada';
 
 const CHAVE_TOKEN = 'nexora_token';
 
+// Com "Lembrar de mim" o token fica no localStorage (sobrevive a fechar o navegador);
+// sem ele, no sessionStorage (some ao fechar a aba). Útil em computadores compartilhados, como o do caixa.
+const lerDe = (armazenamento) => {
+  try { return armazenamento.getItem(CHAVE_TOKEN); } catch { return null; }
+};
+const apagarDe = (armazenamento) => {
+  try { armazenamento.removeItem(CHAVE_TOKEN); } catch { /* storage indisponível */ }
+};
+
 export const tokenStorage = {
-  obter: () => {
-    try { return localStorage.getItem(CHAVE_TOKEN); } catch { return null; }
-  },
-  salvar: (token) => {
-    try { localStorage.setItem(CHAVE_TOKEN, token); } catch { /* storage indisponível */ }
+  obter: () => lerDe(globalThis.localStorage) ?? lerDe(globalThis.sessionStorage),
+  salvar: (token, { lembrar = true } = {}) => {
+    tokenStorage.limpar();
+    try { (lembrar ? localStorage : sessionStorage).setItem(CHAVE_TOKEN, token); } catch { /* storage indisponível */ }
   },
   limpar: () => {
-    try { localStorage.removeItem(CHAVE_TOKEN); } catch { /* storage indisponível */ }
+    apagarDe(globalThis.localStorage);
+    apagarDe(globalThis.sessionStorage);
   },
 };
 

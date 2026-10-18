@@ -194,6 +194,8 @@ Na dúvida sobre alguma regra de negócio, a implementação de referência est�
 
 Em produção (Vercel/Netlify), defina `VITE_API_URL` nas variáveis de ambiente do projeto antes do build.
 
+**Segurança no deploy:** o `vercel.json` define os cabeçalhos de segurança (Content-Security-Policy, `X-Frame-Options`, `nosniff`, `Referrer-Policy`), e o `npm run preview` aplica os mesmos para testar localmente. Em outra hospedagem, configure cabeçalhos equivalentes. A CSP só permite chamar a API na mesma origem ou em `https://`; uma API em `http://` de outro endereço exige ajustar o `connect-src`.
+
 ---
 
 ## 📁 Estrutura de Diretórios

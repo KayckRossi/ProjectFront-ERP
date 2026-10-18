@@ -31,7 +31,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await authApi.login(email, password);
+      await authApi.login(email, password, { lembrar: rememberMe });
       window.location.href = returnTo;
     } catch (err) {
       setError(err?.status === 401
