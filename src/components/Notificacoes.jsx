@@ -8,7 +8,7 @@ import { usePedidos } from '@/api/pedidos';
 import { useConfiguracoes } from '@/api/configuracoes';
 import { useCompras } from '@/api/compras';
 import { useAuth } from '@/lib/AuthContext';
-import { linkBackoffice } from '@/lib/links';
+import { abrirExterno, backofficeConfigurado, linkBackoffice } from '@/lib/links';
 
 const plural = (quantidade, singular, pluralTexto) => `${quantidade} ${quantidade === 1 ? singular : pluralTexto}`;
 
@@ -22,12 +22,12 @@ export default function Notificacoes() {
   const alertaEstoqueAtivo = (configuracoes?.notificacoes?.alertaEstoqueBaixo ?? true) && pode('estoque.gerenciar');
   const { data: estoque = [] } = useEstoque({ enabled: alertaEstoqueAtivo });
   const { data: pedidos = [] } = usePedidos({ atualizarACada: 30_000, ativo: pode('pdv.operar') });
-  const { data: comprasAbertas = [] } = useCompras({ status: 'aberta' }, { enabled: pode('compras.gerenciar') && Boolean(linkBackoffice()) });
+  const { data: comprasAbertas = [] } = useCompras({ status: 'aberta' }, { enabled: pode('compras.gerenciar') && backofficeConfigurado });
 
   const semEstoque = alertaEstoqueAtivo ? estoque.filter((p) => p.estoque === 0).length : 0;
   const estoqueBaixo = alertaEstoqueAtivo ? estoque.filter((p) => p.estoque > 0 && p.status !== 'OK').length : 0;
   const pendentes = pedidos.filter((p) => p.status === 'pendente').length;
-  const aguardandoRecebimento = linkBackoffice() ? comprasAbertas.length : 0;
+  const aguardandoRecebimento = backofficeConfigurado ? comprasAbertas.length : 0;
 
   const alertas = [
     semEstoque > 0 && { id: 'sem-estoque', icone: PackageX, cor: 'text-danger', texto: `${plural(semEstoque, 'produto', 'produtos')} sem estoque`, destino: '/estoque?filtro=sem-estoque' },
@@ -58,7 +58,7 @@ export default function Notificacoes() {
             <CheckCircle2 size={16} className="text-pearl" /> Tudo em ordem por aqui.
           </div>
         ) : alertas.map(({ id, icone: Icone, cor, texto, destino, externo }) => (
-          <DropdownMenuItem key={id} onClick={() => (externo ? window.location.assign(destino) : navigate(destino))} className="gap-2 py-2.5 cursor-pointer hover:bg-graphite-hover focus:bg-graphite-hover">
+          <DropdownMenuItem key={id} onClick={() => (externo ? abrirExterno(destino) : navigate(destino))} className="gap-2 py-2.5 cursor-pointer hover:bg-graphite-hover focus:bg-graphite-hover">
             <Icone size={16} className={cor} /> <span className="text-sm">{texto}</span>
           </DropdownMenuItem>
         ))}

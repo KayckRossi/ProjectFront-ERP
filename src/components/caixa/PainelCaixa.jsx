@@ -9,7 +9,7 @@ import { formatCurrency, formatDataHora } from '@/lib/format';
 
 const classeBotao = 'h-9 px-3 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1.5';
 
-// Caixa do usuário logado. "barra" é a faixa do PDV; "cartao" é o bloco da tela Caixa (e do PDV com caixa fechado).
+// Caixa do usuário logado no PDV. "barra" é a faixa acima dos produtos; "cartao" é o bloco mostrado com o caixa fechado.
 export default function PainelCaixa({ variante = 'barra' }) {
   const caixaQuery = useCaixaAtual();
   const { data: configuracoes } = useConfiguracoes();
