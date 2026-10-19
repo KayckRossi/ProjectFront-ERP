@@ -13,12 +13,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { mockSellers } from '@/data/mockData';
 import { Seller } from '@/types';
+import { useColecao, vendedoresApi } from '@/api/recursos';
 
 export default function Vendedores() {
   const [search, setSearch] = useState('');
-  const [sellers, setSellers] = useState<Seller[]>(mockSellers);
+  const [sellers, setSellers] = useColecao(vendedoresApi);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
   const [formData, setFormData] = useState({

@@ -14,9 +14,9 @@ import {
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { mockProducts, mockCustomers, paymentMethods } from '@/data/mockData';
 import { Product, CartItem } from '@/types';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -31,16 +31,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { clientesApi, produtosApi, useFormasPagamento, useLista, useRegistrarVenda } from '@/api/recursos';
 
 export default function PDV() {
+  const { data: allProducts = [] } = useLista(produtosApi);
+  const { data: allCustomers = [] } = useLista(clientesApi);
+  const { data: paymentMethods = [] } = useFormasPagamento();
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [paymentDialog, setPaymentDialog] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState('');
   const [discount, setDiscount] = useState(0);
+  const registrarVenda = useRegistrarVenda();
 
-  const filteredProducts = mockProducts.filter(
+  const filteredProducts = allProducts.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.code.toLowerCase().includes(search.toLowerCase()) ||
@@ -98,10 +103,24 @@ export default function PDV() {
   const total = subtotal - discount;
 
   const handleFinishSale = () => {
-    // Here would be the sale completion logic
-    alert(`Venda finalizada!\nTotal: R$ ${total.toFixed(2)}\nPagamento: ${selectedPayment}`);
-    setPaymentDialog(false);
-    clearCart();
+    registrarVenda.mutate(
+      {
+        items: cart,
+        customerId: selectedCustomer || undefined,
+        subtotal,
+        discount,
+        total,
+        paymentMethod: selectedPayment,
+        status: 'completed',
+      },
+      {
+        onSuccess: () => {
+          toast.success(`Venda finalizada! Total: R$ ${total.toFixed(2)} (${selectedPayment})`);
+          setPaymentDialog(false);
+          clearCart();
+        },
+      },
+    );
   };
 
   const getPaymentIcon = (method: string) => {
@@ -192,7 +211,7 @@ export default function PDV() {
                 <SelectValue placeholder="Selecionar cliente (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                {mockCustomers.map((customer) => (
+                {allCustomers.map((customer) => (
                   <SelectItem key={customer.id} value={customer.id}>
                     {customer.name}
                   </SelectItem>
@@ -339,7 +358,7 @@ export default function PDV() {
             <Button variant="outline" onClick={() => setPaymentDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleFinishSale} disabled={!selectedPayment}>
+            <Button onClick={handleFinishSale} disabled={!selectedPayment || registrarVenda.isPending}>
               Confirmar Pagamento
             </Button>
           </DialogFooter>

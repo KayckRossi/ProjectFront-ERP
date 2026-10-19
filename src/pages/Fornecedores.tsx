@@ -13,12 +13,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { mockSuppliers } from '@/data/mockData';
 import { Supplier } from '@/types';
+import { fornecedoresApi, useColecao } from '@/api/recursos';
 
 export default function Fornecedores() {
   const [search, setSearch] = useState('');
-  const [suppliers, setSuppliers] = useState<Supplier[]>(mockSuppliers);
+  const [suppliers, setSuppliers] = useColecao(fornecedoresApi);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState({

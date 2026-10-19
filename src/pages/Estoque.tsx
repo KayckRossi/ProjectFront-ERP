@@ -20,14 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockProducts } from '@/data/mockData';
 import { Product } from '@/types';
 import { cn } from '@/lib/utils';
+import { produtosApi, useColecao } from '@/api/recursos';
 
 export default function Estoque() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'low' | 'ok'>('all');
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useColecao(produtosApi);
   const [adjustDialog, setAdjustDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [adjustType, setAdjustType] = useState<'add' | 'remove'>('add');

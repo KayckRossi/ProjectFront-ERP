@@ -1,73 +1,79 @@
-# Welcome to your Lovable project
+# nexo365 — ERP & PDV (front-end)
 
-## Project info
+Front-end do **nexo365** (Nuvex Tecnologia): PDV, produtos, estoque, clientes, fornecedores, vendedores, contas a pagar e a receber, recibos, códigos de barras, relatórios e usuários. O painel administrativo fica no [nexora-backoffice](https://github.com/KayckRossi/nexora-backoffice).
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Stack: Vite 5 · React 18 · TypeScript · Tailwind · shadcn/ui · TanStack Query · react-router 6 · Vitest.
 
-## How can I edit this code?
+## Como rodar
 
-There are several ways of editing your application.
+Pré-requisito: Node.js 18+.
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+npm install
+npm run dev        # http://localhost:8080
 ```
 
-**Edit a file directly in GitHub**
+Sem backend configurado o app abre em **modo demonstração**: um servidor dentro do navegador (`src/api/demo.ts`) responde às rotas da API com dados de exemplo, e qualquer e-mail e senha entram. Os dados ficam no navegador (`localStorage`).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Scripts
+| Script | O que faz |
+|---|---|
+| `npm run dev` | desenvolvimento (porta 8080) |
+| `npm run build` / `npm run preview` | build de produção e servidor local dele (porta 4173) |
+| `npm run lint` | ESLint |
+| `npm test` | testes unitários e de contrato (contra o modo demonstração) |
+| `npm run test:contrato` | testes de contrato contra um backend real (veja abaixo) |
 
-**Use GitHub Codespaces**
+## Backend
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+O contrato completo (rotas, campos, regras, erros e CORS) está em **[CONTRATO_API_BACKEND.md](CONTRATO_API_BACKEND.md)**.
 
-## What technologies are used for this project?
+Arquitetura do front:
 
-This project is built with:
+```
+telas (src/pages)
+  └─ hooks do React Query (src/api/recursos.ts: useLista, useColecao, useRegistrarVenda...)
+       └─ cliente HTTP único (src/lib/http.ts: endereço da API, token Bearer, erros, datas)
+            ├─ backend real  ({VITE_API_URL}/api/...)
+            └─ modo demonstração (src/api/demo.ts), quando não há endereço
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Autenticação** (`src/lib/auth.ts`): `POST /api/auth/login` devolve o token, guardado no navegador ("Manter conectado" usa `localStorage`; sem ele, `sessionStorage`). Todas as rotas, menos `/login`, exigem token (`src/components/RotaProtegida.tsx`); qualquer `401` volta para o login.
+- **Gravações:** `useColecao` funciona como um `useState` — a tela altera a lista como sempre e cada diferença vira `POST`, `PUT` ou `DELETE` no backend; depois a lista é recarregada do servidor. A venda do PDV é um `POST /api/vendas` (o backend baixa o estoque).
 
-## How can I deploy this project?
+### Apontar para o backend
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+1. **No build:** copie `.env.example` para `.env.local` e defina `VITE_API_URL=https://endereco-do-backend`.
+2. **Sem rebuild (útil com ngrok):** abra o front com `?api=https://endereco-do-backend`, por exemplo `https://xxxx.ngrok-free.app/login?api=https://minha-api.ngrok-free.app`. O endereço fica salvo no navegador e aparece na tela de login. `?api=demo` volta para o modo demonstração.
+3. **Sem CORS em desenvolvimento:** `VITE_API_URL=/` e `API_PROXY_TARGET=http://localhost:3000` — o Vite repassa `/api` para o backend.
 
-## Can I connect a custom domain to my Lovable project?
+### Conferir o backend contra o contrato
 
-Yes, you can!
+```bash
+CONTRATO_API_URL=http://localhost:3000 CONTRATO_EMAIL=admin@empresa.com CONTRATO_SENHA=senha npm run test:contrato
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Use um banco de testes: os testes criam e apagam registros.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Acesso por ngrok
+
+O `vite.config.ts` já aceita os domínios do ngrok no `dev` e no `preview`:
+
+```bash
+npm run build && npm run preview     # porta 4173
+ngrok http 4173
+```
+
+No plano grátis o ngrok mostra uma página de aviso na primeira visita ("Visit Site").
+
+## Estrutura
+
+```
+src/
+├── api/          recursos REST + hooks (recursos.ts), servidor de demonstração (demo.ts), testes de contrato
+├── components/   layout (Sidebar, MainLayout), RotaProtegida e componentes shadcn/ui
+├── data/         dados de exemplo usados pelo modo demonstração
+├── lib/          cliente HTTP, autenticação e utilitários
+├── pages/        telas
+└── types/        tipos compartilhados com o contrato da API
+```

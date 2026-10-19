@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockProducts, mockSales, mockCustomers } from '@/data/mockData';
+import { clientesApi, produtosApi, useLista, vendasApi } from '@/api/recursos';
 
 interface ReportType {
   id: string;
@@ -77,6 +77,9 @@ const reportTypes: ReportType[] = [
 ];
 
 export default function Relatorios() {
+  const { data: allProducts = [] } = useLista(produtosApi);
+  const { data: allSales = [] } = useLista(vendasApi);
+  const { data: allCustomers = [] } = useLista(clientesApi);
   const [selectedReport, setSelectedReport] = useState<string>('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -100,27 +103,27 @@ export default function Relatorios() {
               <div className="bg-muted/50 rounded-lg p-4 text-center">
                 <p className="text-sm text-muted-foreground">Total Vendas</p>
                 <p className="text-2xl font-bold text-success">
-                  R$ {mockSales.reduce((acc, s) => acc + s.total, 0).toFixed(2)}
+                  R$ {allSales.reduce((acc, s) => acc + s.total, 0).toFixed(2)}
                 </p>
               </div>
               <div className="bg-muted/50 rounded-lg p-4 text-center">
                 <p className="text-sm text-muted-foreground">Qtd. Vendas</p>
-                <p className="text-2xl font-bold">{mockSales.length}</p>
+                <p className="text-2xl font-bold">{allSales.length}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-4 text-center">
                 <p className="text-sm text-muted-foreground">Ticket Médio</p>
                 <p className="text-2xl font-bold">
                   R${' '}
                   {(
-                    mockSales.reduce((acc, s) => acc + s.total, 0) /
-                    mockSales.length
+                    allSales.reduce((acc, s) => acc + s.total, 0) /
+                    (allSales.length || 1)
                   ).toFixed(2)}
                 </p>
               </div>
               <div className="bg-muted/50 rounded-lg p-4 text-center">
                 <p className="text-sm text-muted-foreground">Descontos</p>
                 <p className="text-2xl font-bold text-destructive">
-                  R$ {mockSales.reduce((acc, s) => acc + s.discount, 0).toFixed(2)}
+                  R$ {allSales.reduce((acc, s) => acc + s.discount, 0).toFixed(2)}
                 </p>
               </div>
             </div>
@@ -132,7 +135,7 @@ export default function Relatorios() {
           <div className="space-y-4">
             <h3 className="font-bold text-lg">Produtos Mais Vendidos</h3>
             <div className="space-y-2">
-              {mockProducts.slice(0, 5).map((product, index) => (
+              {allProducts.slice(0, 5).map((product, index) => (
                 <div
                   key={product.id}
                   className="flex items-center justify-between bg-muted/50 rounded-lg p-3"
@@ -165,20 +168,20 @@ export default function Relatorios() {
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div className="bg-muted/50 rounded-lg p-4 text-center">
                 <p className="text-sm text-muted-foreground">Total Produtos</p>
-                <p className="text-2xl font-bold">{mockProducts.length}</p>
+                <p className="text-2xl font-bold">{allProducts.length}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-4 text-center">
                 <p className="text-sm text-muted-foreground">Valor em Estoque</p>
                 <p className="text-2xl font-bold text-primary">
                   R${' '}
-                  {mockProducts
+                  {allProducts
                     .reduce((acc, p) => acc + p.stock * p.cost, 0)
                     .toFixed(2)}
                 </p>
               </div>
             </div>
             <div className="space-y-2">
-              {mockProducts.slice(0, 5).map((product) => (
+              {allProducts.slice(0, 5).map((product) => (
                 <div
                   key={product.id}
                   className="flex items-center justify-between bg-muted/50 rounded-lg p-3"
@@ -211,7 +214,7 @@ export default function Relatorios() {
           <div className="space-y-4">
             <h3 className="font-bold text-lg">Clientes por Compras</h3>
             <div className="space-y-2">
-              {mockCustomers.map((customer, index) => (
+              {allCustomers.map((customer, index) => (
                 <div
                   key={customer.id}
                   className="flex items-center justify-between bg-muted/50 rounded-lg p-3"

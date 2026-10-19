@@ -14,12 +14,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { mockCustomers } from '@/data/mockData';
 import { Customer } from '@/types';
+import { clientesApi, useColecao } from '@/api/recursos';
 
 export default function Clientes() {
   const [search, setSearch] = useState('');
-  const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
+  const [customers, setCustomers] = useColecao(clientesApi);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [formData, setFormData] = useState({

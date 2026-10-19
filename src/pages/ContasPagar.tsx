@@ -20,13 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockAccountsPayable, mockSuppliers } from '@/data/mockData';
 import { Account } from '@/types';
+import { contasPagarApi, fornecedoresApi, useColecao, useLista } from '@/api/recursos';
 
 export default function ContasPagar() {
+  const { data: allSuppliers = [] } = useLista(fornecedoresApi);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'overdue' | 'paid'>('all');
-  const [accounts, setAccounts] = useState<Account[]>(mockAccountsPayable);
+  const [accounts, setAccounts] = useColecao(contasPagarApi);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     description: '',
@@ -303,7 +304,7 @@ export default function ContasPagar() {
                   <SelectValue placeholder="Selecione o fornecedor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockSuppliers.map((supplier) => (
+                  {allSuppliers.map((supplier) => (
                     <SelectItem key={supplier.id} value={supplier.id}>
                       {supplier.name}
                     </SelectItem>

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { sair, useUsuarioAtual } from '@/lib/auth';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -18,6 +20,7 @@ import {
   Wine,
   ChevronDown,
   ChevronRight,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -44,10 +47,25 @@ const navItems: NavItem[] = [
   { label: 'Usuários', icon: Settings, path: '/usuarios' },
 ];
 
+const PERFIS: Record<string, string> = {
+  admin: 'Administrador',
+  manager: 'Gerente',
+  seller: 'Vendedor',
+  cashier: 'Caixa',
+};
+
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const location = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { data: usuario } = useUsuarioAtual();
+
+  const handleLogout = async () => {
+    await sair(queryClient);
+    navigate('/login', { replace: true });
+  };
 
   const toggleExpanded = (label: string) => {
     setExpandedItems((prev) =>
@@ -162,16 +180,25 @@ export function Sidebar() {
         <div className="p-4 border-t border-sidebar-border">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
-              A
+              {(usuario?.name ?? '?').charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground truncate">
-                Admin
+                {usuario?.name ?? '...'}
               </p>
               <p className="text-xs text-sidebar-foreground/60 truncate">
-                Administrador
+                {usuario ? PERFIS[usuario.role] ?? usuario.role : ''}
               </p>
             </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Sair"
+              aria-label="Sair"
+              className="p-2 rounded-lg text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </aside>

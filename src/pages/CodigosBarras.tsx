@@ -6,16 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { mockProducts } from '@/data/mockData';
 import { Product } from '@/types';
 import { cn } from '@/lib/utils';
+import { produtosApi, useLista } from '@/api/recursos';
 
 export default function CodigosBarras() {
+  const { data: allProducts = [] } = useLista(produtosApi);
   const [search, setSearch] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-  const filteredProducts = mockProducts.filter(
+  const filteredProducts = allProducts.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.code.toLowerCase().includes(search.toLowerCase()) ||
@@ -53,7 +54,7 @@ export default function CodigosBarras() {
   const handlePrint = () => {
     const printContent = selectedProducts
       .map((id) => {
-        const product = mockProducts.find((p) => p.id === id);
+        const product = allProducts.find((p) => p.id === id);
         if (!product) return '';
         const qty = quantities[id] || 1;
         return Array(qty)

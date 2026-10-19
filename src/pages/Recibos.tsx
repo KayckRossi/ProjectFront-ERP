@@ -11,15 +11,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { mockSales, mockCustomers } from '@/data/mockData';
 import { Sale } from '@/types';
+import { clientesApi, useLista, vendasApi } from '@/api/recursos';
 
 export default function Recibos() {
+  const { data: allSales = [] } = useLista(vendasApi);
+  const { data: allCustomers = [] } = useLista(clientesApi);
   const [search, setSearch] = useState('');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [receiptDialog, setReceiptDialog] = useState(false);
 
-  const sales = mockSales.filter((s) => s.status === 'completed');
+  const sales = allSales.filter((s) => s.status === 'completed');
 
   const filteredSales = sales.filter((s) =>
     s.id.includes(search) || s.paymentMethod.toLowerCase().includes(search.toLowerCase())
@@ -27,7 +29,7 @@ export default function Recibos() {
 
   const getCustomerName = (customerId?: string) => {
     if (!customerId) return 'Cliente não identificado';
-    const customer = mockCustomers.find((c) => c.id === customerId);
+    const customer = allCustomers.find((c) => c.id === customerId);
     return customer?.name || 'Cliente não encontrado';
   };
 

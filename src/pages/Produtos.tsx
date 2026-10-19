@@ -20,12 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockProducts, categories, mockSuppliers } from '@/data/mockData';
 import { Product } from '@/types';
+import { fornecedoresApi, produtosApi, useCategorias, useColecao, useLista } from '@/api/recursos';
 
 export default function Produtos() {
+  const { data: categories = [] } = useCategorias();
+  const { data: allSuppliers = [] } = useLista(fornecedoresApi);
   const [search, setSearch] = useState('');
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useColecao(produtosApi);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
@@ -299,7 +301,7 @@ export default function Produtos() {
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockSuppliers.map((supplier) => (
+                  {allSuppliers.map((supplier) => (
                     <SelectItem key={supplier.id} value={supplier.id}>
                       {supplier.name}
                     </SelectItem>

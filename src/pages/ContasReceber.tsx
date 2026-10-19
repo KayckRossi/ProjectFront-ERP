@@ -20,14 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockAccountsReceivable, mockCustomers } from '@/data/mockData';
 import { Account } from '@/types';
 import { cn } from '@/lib/utils';
+import { clientesApi, contasReceberApi, useColecao, useLista } from '@/api/recursos';
 
 export default function ContasReceber() {
+  const { data: allCustomers = [] } = useLista(clientesApi);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'overdue' | 'paid'>('all');
-  const [accounts, setAccounts] = useState<Account[]>(mockAccountsReceivable);
+  const [accounts, setAccounts] = useColecao(contasReceberApi);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     description: '',
@@ -304,7 +305,7 @@ export default function ContasReceber() {
                   <SelectValue placeholder="Selecione o cliente" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockCustomers.map((customer) => (
+                  {allCustomers.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
                       {customer.name}
                     </SelectItem>

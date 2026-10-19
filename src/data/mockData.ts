@@ -1,4 +1,4 @@
-import { Product, Customer, Supplier, Seller, Sale, Account } from '@/types';
+import { Product, Customer, Supplier, Seller, Sale, Account, User } from '@/types';
 
 export const mockProducts: Product[] = [
   {
@@ -349,4 +349,34 @@ export const paymentMethods = [
   'Cartão Crédito',
   'PIX',
   'Fiado',
+];
+
+export const mockUsers: User[] = [
+  {
+    id: '1',
+    name: 'Administrador',
+    email: 'admin@gestao.com',
+    role: 'admin',
+    permissions: ['all'],
+    active: true,
+    createdAt: new Date(),
+  },
+  {
+    id: '2',
+    name: 'Gerente Loja',
+    email: 'gerente@gestao.com',
+    role: 'manager',
+    permissions: ['sales', 'stock', 'reports', 'customers'],
+    active: true,
+    createdAt: new Date(),
+  },
+  {
+    id: '3',
+    name: 'Caixa 01',
+    email: 'caixa1@gestao.com',
+    role: 'cashier',
+    permissions: ['sales'],
+    active: true,
+    createdAt: new Date(),
+  },
 ];

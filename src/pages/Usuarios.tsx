@@ -22,36 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { User as UserType } from '@/types';
-
-const mockUsers: UserType[] = [
-  {
-    id: '1',
-    name: 'Administrador',
-    email: 'admin@gestao.com',
-    role: 'admin',
-    permissions: ['all'],
-    active: true,
-    createdAt: new Date(),
-  },
-  {
-    id: '2',
-    name: 'Gerente Loja',
-    email: 'gerente@gestao.com',
-    role: 'manager',
-    permissions: ['sales', 'stock', 'reports', 'customers'],
-    active: true,
-    createdAt: new Date(),
-  },
-  {
-    id: '3',
-    name: 'Caixa 01',
-    email: 'caixa1@gestao.com',
-    role: 'cashier',
-    permissions: ['sales'],
-    active: true,
-    createdAt: new Date(),
-  },
-];
+import { useColecao, usuariosApi } from '@/api/recursos';
 
 const allPermissions = [
   { id: 'sales', label: 'Vendas (PDV)' },
@@ -77,7 +48,7 @@ const roles = [
 
 export default function Usuarios() {
   const [search, setSearch] = useState('');
-  const [users, setUsers] = useState<UserType[]>(mockUsers);
+  const [users, setUsers] = useColecao(usuariosApi);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
   const [formData, setFormData] = useState({

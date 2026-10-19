@@ -11,13 +11,17 @@ import {
 import { MainLayout } from '@/components/layout/MainLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
-import { mockProducts, mockSales, mockAccountsReceivable, mockAccountsPayable } from '@/data/mockData';
+import { contasPagarApi, contasReceberApi, produtosApi, useLista, vendasApi } from '@/api/recursos';
 
 export default function Dashboard() {
-  const totalSales = mockSales.reduce((acc, sale) => acc + sale.total, 0);
-  const lowStockProducts = mockProducts.filter((p) => p.stock <= p.minStock);
-  const pendingReceivables = mockAccountsReceivable.filter((a) => a.status !== 'paid');
-  const pendingPayables = mockAccountsPayable.filter((a) => a.status !== 'paid');
+  const { data: allProducts = [] } = useLista(produtosApi);
+  const { data: allSales = [] } = useLista(vendasApi);
+  const { data: allReceivables = [] } = useLista(contasReceberApi);
+  const { data: allPayables = [] } = useLista(contasPagarApi);
+  const totalSales = allSales.reduce((acc, sale) => acc + sale.total, 0);
+  const lowStockProducts = allProducts.filter((p) => p.stock <= p.minStock);
+  const pendingReceivables = allReceivables.filter((a) => a.status !== 'paid');
+  const pendingPayables = allPayables.filter((a) => a.status !== 'paid');
 
   const totalReceivables = pendingReceivables.reduce((acc, a) => acc + a.value, 0);
   const totalPayables = pendingPayables.reduce((acc, a) => acc + a.value, 0);
@@ -40,7 +44,7 @@ export default function Dashboard() {
         />
         <StatCard
           title="Produtos Cadastrados"
-          value={mockProducts.length}
+          value={allProducts.length}
           icon={Package}
           variant="success"
         />
@@ -104,13 +108,13 @@ export default function Dashboard() {
             <h2 className="font-semibold text-foreground">Últimas Vendas</h2>
           </div>
           <div className="p-4">
-            {mockSales.length === 0 ? (
+            {allSales.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">
                 Nenhuma venda registrada
               </p>
             ) : (
               <ul className="space-y-3">
-                {mockSales.slice(0, 5).map((sale) => (
+                {allSales.slice(0, 5).map((sale) => (
                   <li
                     key={sale.id}
                     className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"

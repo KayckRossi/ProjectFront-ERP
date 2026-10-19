@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ApiError, modoDemonstracao, obterApiUrl } from '@/lib/http';
+import { destinoSeguro, entrar } from '@/lib/auth';
 import { Store, Eye, EyeOff, ArrowRight, ShieldCheck, BarChart3, Package, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,20 +10,29 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export default function Login() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [erro, setErro] = useState('');
+  const demonstracao = modoDemonstracao();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simula delay de autenticação
-    setTimeout(() => {
+    setErro('');
+    try {
+      await entrar(email, password, rememberMe);
+      navigate(destinoSeguro(params.get('voltar')), { replace: true });
+    } catch (falha) {
+      setErro(falha instanceof ApiError && falha.status === 401
+        ? 'E-mail ou senha incorretos.'
+        : falha instanceof Error ? falha.message : 'Não foi possível entrar.');
+    } finally {
       setIsLoading(false);
-      navigate('/');
-    }, 1000);
+    }
   };
 
   const features = [
@@ -165,12 +176,18 @@ export default function Login() {
                   <input
                     type="checkbox"
                     id="remember"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
                   />
                   <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
                     Manter conectado
                   </Label>
                 </div>
+
+                {erro && (
+                  <p role="alert" className="text-sm text-destructive">{erro}</p>
+                )}
 
                 <Button
                   type="submit"
@@ -195,9 +212,17 @@ export default function Login() {
 
           {/* Demo Credentials */}
           <div className="bg-muted/50 rounded-xl p-4 border border-border">
-            <p className="text-sm text-muted-foreground text-center">
-              <span className="font-medium text-foreground">Modo demonstração:</span>{' '}
-              Use qualquer e-mail e senha para entrar
+            <p className="text-sm text-muted-foreground text-center break-all">
+              {demonstracao ? (
+                <>
+                  <span className="font-medium text-foreground">Modo demonstração:</span>{' '}
+                  Use qualquer e-mail e senha para entrar
+                </>
+              ) : (
+                <>
+                  <span className="font-medium text-foreground">Servidor:</span> {obterApiUrl()}
+                </>
+              )}
             </p>
           </div>
 
