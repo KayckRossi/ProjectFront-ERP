@@ -1,228 +1,73 @@
-# 📦 ProjectFront-ERP — Nexora ERP & PDV
+# Welcome to your Lovable project
 
-Sistema completo de Gestão Empresarial (ERP) integrado com Ponto de Venda (PDV) e Kanban de Pedidos em tempo real. Desenvolvido com React, Vite e Tailwind CSS, consumindo uma API REST própria.
+## Project info
 
-![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat&logo=vite&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
+**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
 
----
+## How can I edit this code?
 
-## 🎨 Paleta Visual (Dark Theme)
+There are several ways of editing your application.
 
-A interface utiliza um esquema de cores moderno de alto contraste para máxima legibilidade no dia a dia operacional:
+**Use Lovable**
 
-- **Onyx (`#131515`)**: Fundo principal da aplicação.
-- **Graphite (`#2B2C28`)**: Cards, modais e superfícies laterais.
-- **Verdigris (`#339989`)**: Botões principais, ações ativas e destaque primário.
-- **Pearl Aqua (`#7DE2D1`)**: Métricas, realces visuais, badges e hover.
-- **Snow (`#FFFAFB`)**: Tipografia e textos com máxima legibilidade.
+Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
 
----
+Changes made via Lovable will be committed automatically to this repo.
 
-## ✨ Módulos e Funcionalidades
+**Use your preferred IDE**
 
-### 1. 🛒 Ponto de Venda (PDV / POS)
-- **Frente de Caixa Rápida**: Busca instantânea de produtos por nome ou leitor de código de barras.
-- **Filtro por Categorias**: Seleção dinâmica de categorias (Bebidas, Alimentos, Limpeza, etc.).
-- **Carrinho Dinâmico**: Gestão de quantidades (limitadas ao estoque disponível), desconto percentual, cliente da venda e cancelamento.
-- **Checkout Multimeios**: Pagamento via PIX, Cartão e Dinheiro (com cálculo automático de troco e bloqueio de valor insuficiente).
-- **Venda integrada**: ao finalizar, baixa o estoque, cria o pedido no Kanban, lança a entrada no Financeiro e soma ao histórico do cliente.
-- **Controle de caixa**: abertura com fundo de troco, sangria, suprimento e fechamento com conferência (falta/sobra) e relatório impresso. A venda só é liberada com o caixa aberto (opção em Configurações → PDV).
-- **Cupom de venda**: pré-visualização e impressão do cupom não fiscal (térmica 80mm, 58mm ou A4), com impressão automática opcional.
-- **Atalhos de teclado**: `F2` busca, `F3` código de barras, `F4` finalizar venda, `Enter` confirma o pagamento e `Esc` fecha janelas.
-- **Kanban de Pedidos Integrado**: Alternância com 1 clique para visão de pedidos em preparação.
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-### 2. 📋 Kanban de Pedidos
-- Colunas visuais: **Pendente**, **Em Preparo** e **Finalizado**.
-- Arraste de cards via Drag-and-Drop (`@hello-pangea/dnd`) ou botões de avanço rápido.
-- Dados de cliente, total, itens, método de pagamento e hora do pedido.
-- Atualização automática a cada 15 segundos (pedidos feitos em outros caixas aparecem sozinhos).
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-### 3. 🧾 Histórico de Vendas
-- Filtros por período, status, forma de pagamento, cliente ou número da venda.
-- Resumo do período (total vendido, quantidade, ticket médio e canceladas).
-- Detalhe da venda com itens, pagamento e troco, reimpressão do cupom e **cancelamento com estorno** (devolve o estoque, lança a saída no financeiro e ajusta o total do cliente).
+Follow these steps:
 
-### 4. 📊 Dashboard Executivo
-- KPIs calculados a partir das vendas: vendas de hoje, ticket médio, produtos em baixa e faturamento do mês.
-- Gráficos de vendas dos últimos 7 dias e de vendas por categoria no mês (Recharts).
-- Últimas vendas com acesso direto ao detalhe.
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-### 5. 📦 Produtos & Controle de Estoque
-- Listagem com precificação, margem, custo e estoque disponível.
-- Alertas visuais para produtos em nível crítico ou esgotados.
-- Modal de cadastro e edição rápida de produtos, com validação de preço/custo e código de barras (gerado automaticamente se ficar vazio).
-- Movimentação de estoque (entrada e saída/perda) e busca por nome ou SKU.
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
 
-### 6. 👥 Gestão de Clientes
-- Cadastro completo de clientes PF e PJ (Nome, CPF/CNPJ, Telefone, E-mail), com máscaras e validação.
-- Total acumulado de compras e atalho **Ver compras** para o histórico do cliente.
+# Step 3: Install the necessary dependencies.
+npm i
 
-### 7. 💰 Gestão Financeira
-- Fluxo de caixa por período, com entradas (vendas do PDV) e saídas (fornecedores, custos fixos, estornos).
-- Receitas, despesas e saldo do período, balanço dos últimos 6 meses e link de cada lançamento para a venda de origem.
-- Lançamento manual de movimentações e exportação em CSV.
-
-### 8. 📈 Relatórios & Análises
-- Vendas por dia, por categoria, produtos mais vendidos e melhores clientes, todos no período escolhido.
-- Exportação de cada relatório em CSV (compatível com Excel).
-
-### 9. 🗄️ Backoffice (repositório separado)
-As telas de retaguarda (histórico de **caixas**, **compras e entrada de mercadorias**, **fornecedores**, **categorias**, **usuários** e **auditoria**) ficam no **[nexora-backoffice](https://github.com/KayckRossi/nexora-backoffice)**, outro front-end que usa a mesma API. Com `VITE_BACKOFFICE_URL` definida, o menu ganha o atalho **Backoffice**, e o sino e o Financeiro levam às compras de lá.
-
-A abertura, a sangria, o suprimento e o fechamento do caixa continuam no PDV deste app.
-
-#### Perfis de acesso
-| Perfil | Acesso no ERP & PDV | No Backoffice |
-|---|---|---|
-| Administrador | Tudo, inclusive configurações | Tudo, inclusive usuários e auditoria |
-| Gerente | Dashboard, vendas e cancelamentos, produtos, estoque, clientes, financeiro e relatórios | Caixa de todos, compras, fornecedores e categorias |
-| Operador de caixa | PDV, o próprio caixa, histórico de vendas e cadastro de clientes | O próprio caixa |
-
-O menu, a busca global e as notificações mostram só o que o perfil pode usar, e o backend aplica as mesmas regras (`src/lib/permissoes.js`).
-
-### 10. ⚙️ Configurações e navegação
-- Dados da loja e mensagem do cupom, modelo de impressão, regras do PDV, alertas e segurança, salvos no backend.
-- **Busca global** (`Ctrl+K`): páginas, produtos, clientes e vendas pelo número, ignorando acentos.
-- **Notificações** reais no sino: produtos sem estoque ou com estoque baixo, pedidos pendentes e compras aguardando recebimento (estas com `VITE_BACKOFFICE_URL`).
-
-### 💾 Modo demonstração
-Sem `VITE_API_URL`, um servidor de demonstração dentro do navegador (`src/api/demo/`) responde às mesmas rotas do contrato da API. Ele gera um histórico de cerca de 6 meses de vendas, caixas, compras, despesas e pedidos a partir da data atual e salva tudo no `localStorage`. Para voltar aos dados iniciais, use **Configurações → Dados → Restaurar**.
-
----
-
-## 🛠 Tecnologias Utilizadas
-
-- **Framework**: [React 18](https://react.dev/) + [Vite](https://vitejs.dev/)
-- **Roteamento**: [React Router DOM v6](https://reactrouter.com/)
-- **Estilização**: [Tailwind CSS](https://tailwindcss.com/) + Tailwind Animate
-- **UI Components**: Primitivos acessíveis baseados em [Radix UI](https://www.radix-ui.com/)
-- **Animações**: [Framer Motion](https://www.framer-motion.dev/)
-- **Drag and Drop**: [@hello-pangea/dnd](https://github.com/hello-pangea/dnd)
-- **Gráficos**: [Recharts](https://recharts.org/)
-- **Ícones**: [Lucide React](https://lucide.dev/)
-- **Dados**: [TanStack Query](https://tanstack.com/query) sobre uma API REST própria via `fetch` (contrato em [`CONTRATO_API_BACKEND.md`](CONTRATO_API_BACKEND.md))
-- **Testes**: [Vitest](https://vitest.dev/)
-
----
-
-## 🚀 Como Executar Localmente
-
-### Pré-requisitos
-- Node.js 20.19+ ou 22.12+
-- npm versão 10+
-
-### Instalação
-
-1. Clone o repositório:
-```bash
-git clone https://github.com/KayckRossi/ProjectFront-ERP.git
-cd ProjectFront-ERP
-```
-
-2. Instale as dependências:
-```bash
-npm install
-```
-
-3. (Opcional) Conecte ao backend copiando `.env.example` para `.env.local` (veja [Conectando o backend](#-conectando-o-backend)):
-```bash
-cp .env.example .env.local
-```
-Sem configurar o backend o sistema roda em **modo demonstração**, com dados salvos no navegador e um usuário de cada perfil (a tela de login mostra os três):
-
-| Perfil | E-mail | Senha |
-|---|---|---|
-| Administrador | `admin@nexora.com` | `admin123` |
-| Gerente | `gerente@nexora.com` | `gerente123` |
-| Operador de caixa | `operador@nexora.com` | `operador123` |
-
-4. Inicie o servidor de desenvolvimento:
-```bash
+# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
-5. Acesse no navegador:
-```
-http://localhost:5173
-```
+**Edit a file directly in GitHub**
 
-### Scripts Disponíveis
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-- `npm run dev`: Inicia o ambiente de desenvolvimento local com Vite.
-- `npm run build`: Compila os arquivos de produção para a pasta `dist/`.
-- `npm run preview`: Visualiza localmente o build de produção.
-- `npm run lint`: Executa a verificação estática do ESLint.
-- `npm run lint:fix`: Corrige automaticamente avisos e padrões de linting.
-- `npm test`: Roda os testes (incluindo os testes de contrato contra o servidor de demonstração).
-- `npm run test:watch`: Roda os testes em modo observação.
-- `npm run test:contrato`: Roda os testes de contrato contra um backend real (veja abaixo).
+**Use GitHub Codespaces**
 
----
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-## 🔌 Conectando o backend
+## What technologies are used for this project?
 
-O front segue o contrato em [`CONTRATO_API_BACKEND.md`](CONTRATO_API_BACKEND.md). Todas as chamadas passam por `src/api/http.js`, e cada recurso tem seus hooks em `src/api/*.js`.
+This project is built with:
 
-| Variável | Para que serve |
-|---|---|
-| `VITE_API_URL` | URL do backend (ex.: `http://localhost:3000`). Vazia = modo demonstração. `/` = mesma origem do front. |
-| `API_PROXY_TARGET` | Só para desenvolvimento/preview: com `VITE_API_URL=/`, o Vite encaminha `/api` para este endereço e evita CORS. |
-| `VITE_BACKOFFICE_URL` | Endereço do [Nexora Backoffice](https://github.com/KayckRossi/nexora-backoffice) (ex.: `http://localhost:5174`). Mostra o atalho no menu e os links para compras. Vazia = sem links. |
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
 
-Duas formas de ligar o backend em desenvolvimento:
+## How can I deploy this project?
 
-```bash
-# A) Chamando o backend direto (o backend precisa liberar CORS para http://localhost:5173)
-VITE_API_URL=http://localhost:3000
+Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
-# B) Pelo proxy do Vite (sem CORS)
-VITE_API_URL=/
-API_PROXY_TARGET=http://localhost:3000
-```
+## Can I connect a custom domain to my Lovable project?
 
-Para conferir se o backend segue o contrato, rode os testes de contrato contra ele (use um banco de testes, pois eles criam vendas e lançamentos):
+Yes, you can!
 
-```bash
-CONTRATO_API_URL=http://localhost:3000 CONTRATO_EMAIL=admin@empresa.com CONTRATO_SENHA=senha npm run test:contrato
-```
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
-`CONTRATO_EMAIL` deve ser de um administrador. Para testar também as permissões, informe um operador em `CONTRATO_EMAIL_OPERADOR` e `CONTRATO_SENHA_OPERADOR`.
-
-Na dúvida sobre alguma regra de negócio, a implementação de referência está em `src/api/demo/dominio/` (um arquivo por módulo).
-
-Em produção (Vercel/Netlify), defina `VITE_API_URL` nas variáveis de ambiente do projeto antes do build.
-
-**Segurança no deploy:** o `vercel.json` define os cabeçalhos de segurança (Content-Security-Policy, `X-Frame-Options`, `nosniff`, `Referrer-Policy`), e o `npm run preview` aplica os mesmos para testar localmente. Em outra hospedagem, configure cabeçalhos equivalentes. A CSP só permite chamar a API na mesma origem ou em `https://`; uma API em `http://` de outro endereço exige ajustar o `connect-src`.
-
----
-
-## 📁 Estrutura de Diretórios
-
-```
-├── src/
-│   ├── api/            # Cliente HTTP, autenticação, hooks por recurso e testes de contrato
-│   │   └── demo/       # Servidor de demonstração (implementação de referência do contrato)
-│   │       └── dominio/ # Regras de negócio por módulo (vendas, caixa, compras, usuários, auditoria...)
-│   ├── components/     # Componentes de layout e reutilizáveis (Modal, Cupom, BuscaGlobal, KanbanPedidos...)
-│   │   └── caixa/      # Abertura, sangria/suprimento e fechamento de caixa
-│   │   └── ui/         # Componentes primitivos (Radix UI / Shadcn)
-│   ├── hooks/          # Hooks customizados (paginação, Esc para fechar, valor atrasado...)
-│   ├── lib/            # Contextos (auth, tema), permissões, datas, dinheiro, máscaras, formatação e CSV
-│   ├── pages/          # Telas completas (Dashboard, PDV, Vendas, Estoque, etc.)
-│   ├── App.jsx         # Roteamento central e provedores
-│   ├── index.css       # Estilos globais e tokens Tailwind
-│   └── main.jsx        # Ponto de entrada React
-├── CONTRATO_API_BACKEND.md
-├── index.html
-├── package.json
-├── tailwind.config.js
-└── vite.config.js
-```
-
----
-
-## 📄 Licença
-
-Este projeto é de uso privado e de propriedade de **Kayck Rossi**.
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
