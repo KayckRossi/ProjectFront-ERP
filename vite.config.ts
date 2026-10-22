@@ -17,9 +17,11 @@ const CABECALHOS_SEGURANCA: Record<string, string> = Object.fromEntries(
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   // Com VITE_API_URL=/ o front chama /api na própria origem e o Vite repassa para API_PROXY_TARGET (sem CORS)
-  const proxy = env.API_PROXY_TARGET
-    ? { "/api": { target: env.API_PROXY_TARGET, changeOrigin: true, secure: false } }
-    : undefined;
+  // Com BACKOFFICE_PROXY_TARGET, /admin vai para o backoffice (publicado com BASE_PATH=/admin/): os dois apps num link só
+  const proxy = {
+    ...(env.API_PROXY_TARGET ? { "/api": { target: env.API_PROXY_TARGET, changeOrigin: true, secure: false } } : {}),
+    ...(env.BACKOFFICE_PROXY_TARGET ? { "/admin": { target: env.BACKOFFICE_PROXY_TARGET, changeOrigin: true } } : {}),
+  };
 
   return {
     server: {
