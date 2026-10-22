@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Estado local do plugin oh-my-claudecode
+.omc/
