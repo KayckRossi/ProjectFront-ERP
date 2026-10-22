@@ -10,6 +10,10 @@ import { Product } from '@/types';
 import { cn } from '@/lib/utils';
 import { produtosApi, useLista } from '@/api/recursos';
 
+// Nome e código vêm do backend e entram como HTML na janela de impressão
+const escaparHtml = (texto: string) =>
+  texto.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
 export default function CodigosBarras() {
   const { data: allProducts = [] } = useLista(produtosApi);
   const [search, setSearch] = useState('');
@@ -57,17 +61,19 @@ export default function CodigosBarras() {
         const product = allProducts.find((p) => p.id === id);
         if (!product) return '';
         const qty = quantities[id] || 1;
+        const nome = escaparHtml(String(product.name ?? ''));
+        const codigo = escaparHtml(String(product.barcode ?? ''));
         return Array(qty)
           .fill(null)
           .map(
             () => `
           <div style="display: inline-block; width: 200px; padding: 10px; margin: 5px; border: 1px solid #ccc; text-align: center;">
-            <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">${product.name}</div>
+            <div style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">${nome}</div>
             <div style="font-family: 'Libre Barcode 128', cursive; font-size: 48px; line-height: 1;">
-              ${product.barcode}
+              ${codigo}
             </div>
-            <div style="font-size: 12px;">${product.barcode}</div>
-            <div style="font-size: 16px; font-weight: bold; margin-top: 5px;">R$ ${product.price.toFixed(2)}</div>
+            <div style="font-size: 12px;">${codigo}</div>
+            <div style="font-size: 16px; font-weight: bold; margin-top: 5px;">R$ ${Number(product.price).toFixed(2)}</div>
           </div>
         `
           )
